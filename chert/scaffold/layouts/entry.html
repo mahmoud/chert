@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{entry.title} - {site.title}</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/github.css">
+  </head>
+  <body>
+    <div id="top">
+      <div id="header">
+        <h1 class="title"><a id="home" href="/">{site.title}</a></h1>
+      </div>
+    </div>
+    <div id="main">
+      {#entry}
+      <h2>{title}</h2>
+      <div class="post">
+        {rendered_content|s}
+      </div>
+      <p class="meta"><a href="/{entry_id}" class="permalink">permalink</a> {publish_date}</p>
+      <div id="previously">
+        {?prev_entries}
+        <h2>Previously</h2>
+        {#prev_entries}
+        <a href="/{.entry_id}.html">{.title}</a><br/>
+        {/prev_entries}
+        {/prev_entries}
+      </div>
+      {/entry}
+    </div>
+  </body>
+</html>
