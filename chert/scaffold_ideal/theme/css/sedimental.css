@@ -1,0 +1,79 @@
+#layer-accent-div-1 {
+    padding-top: 0px;
+    border-top: 4px solid #000;
+}
+
+#layer-accent-div-2 {
+    padding-top: 0px;
+    border-top: 4px solid #666;
+}
+
+#layer-accent-div-3 {
+    padding-top: 0px;
+    border-top: 4px solid #AAA;
+}
+
+#header {
+    text-align: center;
+}
+
+#header h3 {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+#previously-div h5 {
+    font-size: 1.7rem;
+    margin-bottom: 1rem;
+}
+
+#tagline-p {
+    margin-bottom: 0.5rem;
+}
+
+#main-links-p {
+    font-size: 1.7rem;
+    margin-bottom: 0.5rem;
+}
+
+#main-links-p a {
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+span.tags {
+    margin-left: 1rem;
+}
+
+span.tags a {
+    color: #AAA;
+}
+
+/* real footer styles */
+
+#footer {
+    text-align: center;
+    border-bottom: 5px solid #444;
+}
+
+/* sticky footer necessities. See
+http://github.com/mahmoud/skeleton_sticky_footer for more. */
+
+html, body {
+    height: 100%;
+}
+
+.table-container {
+    display: table;
+    height: 100%;
+    width: 100%;
+}
+
+.table-block {
+    display: table-row;
+    height: 1px;
+}
+
+.footer-push {
+    height: auto;
+}

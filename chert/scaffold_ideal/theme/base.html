@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="{site.lang_code}">
+<head>
+  <meta charset="{site.charset}">
+  <title>{+head_title}{site.head_title}{/head_title}</title>
+  <meta name="description" content="{site.meta_desc}">
+  <meta name="author" content="{site.meta_author}">
+
+  <!-- Mobile Specific Meta -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Font
+  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css"> -->
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/normalize.css">
+  <link rel="stylesheet" href="css/skeleton.css">
+  <link rel="stylesheet" href="css/sedimental.css">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="img/favicon.png">
+</head>
+<body>
+  <div class="table-container">
+    <div class="table-block footer-push">
+      <div class="container">
+        <div class="row">
+          <div id="layer-accent-div-1"></div>
+          <div id="layer-accent-div-2"></div>
+          <div id="layer-accent-div-3"></div>
+          <header id="header" class="twelve columns">
+            <h3>{site.title}</h3>
+            <p id="tagline-p">{site.tagline}</p>
+            {?site.main_links}<p id="main-links-p">
+              {#site.main_links}
+              <a title="{.title}" href="{.href}">{.text}</a>
+              {/site.main_links}
+            </p>{/site.main_links}
+            {?site.alt_links}<p id="alt-links-p">
+            {#site.alt_links}
+              <a title="{.title}" href="{.href}">{.text}</a>
+            {/site.alt_links}
+            </p>{/site.alt_links}
+          </header>
+        </div>
+        {+content}Page content{/content}
+      </div> <!-- End header/content container -->
+    </div>
+    <div class="table-block">
+      <div class="container">
+        <footer id="footer" class="twelve columns">
+          {site.copyright_notice}
+        </footer>
+      </div>
+    </div>  <!-- end table block footer div -->
+  </div>
+</body>
+</html>
