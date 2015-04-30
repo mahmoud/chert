@@ -22,6 +22,33 @@
     margin-bottom: 5px;
 }
 
+#previously-div h5 {
+    font-size: 1.7rem;
+    margin-bottom: 1rem;
+}
+
+#tagline-p {
+    margin-bottom: 0.5rem;
+}
+
+#main-links-p {
+    font-size: 1.7rem;
+    margin-bottom: 0.5rem;
+}
+
+#main-links-p a {
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+span.tags {
+    margin-left: 1rem;
+}
+
+span.tags a {
+    color: #AAA;
+}
+
 /* real footer styles */
 
 #footer {
