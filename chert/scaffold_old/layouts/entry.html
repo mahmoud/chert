@@ -17,12 +17,12 @@
       <div class="post">
         {rendered_content|s}
       </div>
-      <p class="meta"><a href="/{entry_id}" class="permalink">permalink</a> {publish_date}</p>
-      <div id="previously">
+      <p class="meta"><a href="/{entry_id}{site.export_html_ext}">{publish_date}</a></p>
+      <div id="previous">
         {?prev_entries}
-        <h2>Previously</h2>
+        <h2>Previous entries</h2>
         {#prev_entries}
-        <a href="/{.entry_id}.html">{.title}</a><br/>
+        <a href="/{.entry_id}{site.export_html_ext}">{.title}</a><br/>
         {/prev_entries}
         {/prev_entries}
       </div>

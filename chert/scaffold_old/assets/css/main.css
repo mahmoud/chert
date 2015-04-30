@@ -1,4 +1,9 @@
 
+/* dark: #475359 */
+/* light1: #E7EBEE */
+/* light2: #DCDCDC */
+
+
 body {
     min-width: 840px;
     text-align: left;
@@ -18,14 +23,13 @@ a:visited {color: purple}
 a:hover {text-decoration: underline}
 
 h1 {
-    font:700 1.275em verdana;
-    color:#090974;
-    margin:0 .5em .5em 0
+    font: 700 1.275em verdana;
+    color: #475359;
+    margin: 0 .5em .5em 0
 }
 
 h2 {
     font:700 1.17em verdana;
-    color:#000;
     margin:.83em 0 .5em
 }
 
@@ -35,32 +39,32 @@ blockquote {
 }
 
 #top {
-    background-color:#090974;
-    color:#FFF;
-    margin-bottom:.67em;
-    border-color:#7373D9;
-    border-style:none none solid;
-    border-width:12px;
-    padding:2em 0 0;
+    background-color: #E7EBEE;
+    color: #475359;
+    margin-bottom: .67em;
+    border-color: #475359;
+    border-style: none none solid;
+    border-width: 9px;
+    padding: 2em 0 0 0;
 }
 
 #header {
-    width:840px;
-    margin:0 auto
+    width: 840px;
+    margin: 0 auto
 }
 
 #home {
-    font:700 2.55em georgia,"Century Schoolbook L";
-    color:#FFF;
-    border:none;
-    text-decoration:none;
+    font: 700 2.55em Georgia, "Century Schoolbook L";
+    color: #475359;
+    border: none;
+    text-decoration: none;
 }
 
 #main {
-    width:840px;
-    margin:0 auto;
-    padding:0;
-    border:none;
+    width: 840px;
+    margin: 0 auto;
+    padding: 0;
+    border: none;
 }
 
 #left {
@@ -85,18 +89,9 @@ blockquote {
     margin: 1em 0 1.5em;
 }
 
-#previously {
+#previous {
     margin: 0 0 1em;
     padding: 0;
-}
-
-a.permalink {
-    font-style:normal;
-    color:#000;
-    background-color:#DDD;
-    border:1px solid gray;
-    text-decoration:none;
-    padding:2px;
 }
 
 code {font:700 1em "courier new",courier}

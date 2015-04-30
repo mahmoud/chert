@@ -99,7 +99,7 @@ class Chert(object):
         self._set_path('input_path', input_path)
         self._set_path('output_path', kw.pop('output_path', None), 'site')
         self._set_path('entries_path', kw.pop('entries_path', None), 'entries')
-        self._set_path('layouts_path', kw.pop('layouts_path', None), 'layouts')
+        self._set_path('theme_path', kw.pop('theme_path', None), 'theme')
 
         self.last_load = None
         self._autoload = kw.pop('autoload', None)
@@ -129,6 +129,7 @@ class Chert(object):
         ret['canonical_domain'] = CANONICAL_DOMAIN
         ret['canonical_base_path'] = CANONICAL_BASE_PATH
         ret['last_updated'] = '2014-10-29T00:00:00-06:00'
+        ret['export_html_ext'] = EXPORT_HTML_EXT
         return ret
 
     @property
@@ -136,8 +137,8 @@ class Chert(object):
         return self.paths['input_path']
 
     @property
-    def layouts_path(self):
-        return self.paths['layouts_path']
+    def theme_path(self):
+        return self.paths['theme_path']
 
     def process(self):
         if not self.last_load:
@@ -150,14 +151,21 @@ class Chert(object):
 
     def load(self):
         self.last_load = time.time()
-        self.html_renderer = AshesEnv(paths=[self.layouts_path])
+        self.html_renderer = AshesEnv(paths=[self.theme_path])
         self.html_renderer.load_all()
 
         entries_path = self.paths['entries_path']
         entry_paths = []
         for entry_path in iter_find_files(entries_path, ENTRY_PAT):
             entry_paths.append(entry_path)
-        self.entries = [Entry.from_path(ep) for ep in entry_paths]
+        self.entries = []
+        for ep in entry_paths:
+            try:
+                entry = Entry.from_path(ep)
+            except IOError as ioe:
+                print 'warning: skipping unopenable entry: %r' % ep
+            else:
+                self.entries.append(entry)
         self.entries.sort(key=lambda e: e.publish_date or datetime)
 
     def validate(self):
@@ -192,16 +200,17 @@ class Chert(object):
             imdr.reset()
 
         # render html
+        site_info = self.get_site_info()
         for entry in entries:
             tmpl_name = entry.layout + LAYOUT_EXT
             render_ctx = dict(entry=entry.to_dict(with_links=True),
-                              site=self.get_site_info())
+                              site=site_info)
             rendered_html = self.html_renderer.render(tmpl_name, render_ctx)
             entry.rendered_html = rendered_html
 
         # render feed
         rendered_feed = self.atom_template.render('atom.xml', {})
-        print rendered_feed
+        # print rendered_feed
 
     def audit(self):
         """
@@ -217,8 +226,10 @@ class Chert(object):
         for entry in self.entries:
             entry_fn = entry.entry_id + EXPORT_HTML_EXT
             cur_output_path = pjoin(output_path, entry_fn)
+
             with open(cur_output_path, 'w') as f:
                 f.write(entry.rendered_html.encode('utf-8'))
+
 
         # index is just the most recent entry for now
         index_path = pjoin(output_path, 'index' + EXPORT_HTML_EXT)
@@ -229,8 +240,9 @@ class Chert(object):
         with open(index_path, 'w') as f:
             f.write(index_content.encode('utf-8'))
 
-        asset_path = pjoin(self.input_path, 'assets')
-        copytree(asset_path, output_path)
+        # copy all directories under the theme path
+        for sdn in get_subdirectories(self.theme_path):
+            copytree(pjoin(self.theme_path, sdn), pjoin(output_path, sdn))
 
     def serve(self):
         host = DEV_SERVER_HOST
@@ -251,9 +263,9 @@ class Chert(object):
         serving = False
 
         entries_path = self.paths['entries_path']
-        layouts_path = self.paths['layouts_path']
+        theme_path = self.paths['theme_path']
         output_path = self.paths['output_path']
-        for changed in _iter_changed_files(entries_path, layouts_path):
+        for changed in _iter_changed_files(entries_path, theme_path):
             if serving:
                 print 'Changed %s files, regenerating...' % len(changed)
                 server.shutdown()
@@ -262,8 +274,10 @@ class Chert(object):
             except KeyboardInterrupt:
                 raise
             except Exception:
+                import pdb;pdb.post_mortem()
                 exc_info = ExceptionInfo.from_current()
                 print exc_info.get_formatted()
+            print 'Serving from %s' % output_path
             os.chdir(abspath(output_path))
             print 'Serving at http://%s:%s%s' % (host, port, base_url)
 
@@ -274,16 +288,26 @@ class Chert(object):
                 serving = True
 
 
+def get_subdirectories(path):
+    "Returns a list of directory names (not absolute paths) in a given path."
+    if not os.path.isdir(path):
+        raise ValueError('expected path to directory, not %r' % path)
+    try:
+        return next(os.walk(path))[1]
+    except StopIteration:  # empty directories
+        return []
+
+
 def format_date(dt_obj):
     return dt_obj.strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
-def _iter_changed_files(entries_path, layouts_path, interval=0.5):
+def _iter_changed_files(entries_path, theme_path, interval=0.5):
     mtimes = {}
     while True:
         changed = []
         to_check = itertools.chain(iter_find_files(entries_path, ENTRY_PAT),
-                                   iter_find_files(layouts_path, LAYOUT_PAT))
+                                   iter_find_files(theme_path, LAYOUT_PAT))
         for path in to_check:
             try:
                 new_mtime = os.stat(path).st_mtime
@@ -301,6 +325,14 @@ def _iter_changed_files(entries_path, layouts_path, interval=0.5):
 _EPOCH_DATE = datetime.utcfromtimestamp(0)
 
 
+"""
+TODO: multiple entries in a single file (for short entries)?
+TODO: tie-break publish dates with modified times
+
+Metadata ideas:
+  - Source
+  - Via
+"""
 class Entry(object):
     def __init__(self, title=None, content=None, **kwargs):
         self.title = title
@@ -365,6 +397,8 @@ class Entry(object):
         if with_links:
             ret['prev_entries'] = [pe.to_dict() for pe in self.prev_entries]
             ret['next_entries'] = [ne.to_dict() for ne in self.next_entries]
+
+        ret['filename'] = ret['entry_id'] + EXPORT_HTML_EXT
         return ret
 
 
@@ -411,5 +445,5 @@ def read_yaml_text(path):
 
 
 if __name__ == '__main__':
-    ch = Chert('scaffold')
+    ch = Chert('scaffold_ideal')
     ch.serve()
