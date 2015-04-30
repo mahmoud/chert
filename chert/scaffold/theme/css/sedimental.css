@@ -41,6 +41,10 @@
     margin-right: 5px;
 }
 
+pre {
+    font-size: 1.3rem;
+}
+
 span.tags {
     margin-left: 1rem;
 }
