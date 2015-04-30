@@ -97,9 +97,10 @@ class Chert(object):
         self.paths = OMD()
         self._paths = OMD()  # for the raw input paths
         self._set_path('input_path', input_path)
-        self._set_path('output_path', kw.pop('output_path', None), 'site')
         self._set_path('entries_path', kw.pop('entries_path', None), 'entries')
         self._set_path('theme_path', kw.pop('theme_path', None), 'theme')
+        self._set_path('output_path', kw.pop('output_path', None), 'site',
+                       required=False)
 
         self.last_load = None
         self._autoload = kw.pop('autoload', None)
@@ -111,7 +112,7 @@ class Chert(object):
 
         self.atom_template = Template('atom.xml', ATOM_TMPL)
 
-    def _set_path(self, name, path, default_prefix=None):
+    def _set_path(self, name, path, default_prefix=None, required=True):
         self._paths[name] = path
         if path:
             self.paths[name] = abspath(path)
@@ -119,6 +120,10 @@ class Chert(object):
             self.paths[name] = pjoin(self.input_path, default_prefix)
         else:
             raise ValueError('no path or default prefix set for %r' % name)
+        if required:
+            if not os.path.exists(self.paths[name]):
+                raise RuntimeError('expected existent %s path, not %r'
+                                   % (name, self.paths[name]))
         return
 
     def get_site_info(self):
@@ -230,7 +235,6 @@ class Chert(object):
             with open(cur_output_path, 'w') as f:
                 f.write(entry.rendered_html.encode('utf-8'))
 
-
         # index is just the most recent entry for now
         index_path = pjoin(output_path, 'index' + EXPORT_HTML_EXT)
         if self.entries:
@@ -274,7 +278,6 @@ class Chert(object):
             except KeyboardInterrupt:
                 raise
             except Exception:
-                import pdb;pdb.post_mortem()
                 exc_info = ExceptionInfo.from_current()
                 print exc_info.get_formatted()
             print 'Serving from %s' % output_path
@@ -445,5 +448,5 @@ def read_yaml_text(path):
 
 
 if __name__ == '__main__':
-    ch = Chert('scaffold_ideal')
+    ch = Chert('scaffold')
     ch.serve()
