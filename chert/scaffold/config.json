@@ -1,9 +1,0 @@
-{'site': {'title': 'Chert',
-          'author': 'Mahmoud Hashemi',
-          'copyright': 'lol'},
- 'dev': {'server_host': '0.0.0.0',
-         'server_port': 8080,
-         'base_url': '/'},
- 'prod': {'canonical_domain': 'http://sedimental.org',
-          'canonical_base_path': '/'}
-}

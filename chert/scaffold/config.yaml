@@ -1,0 +1,15 @@
+---
+site:
+  title: Chert
+  author: Mahmoud Hashemi
+  copyright: >-
+    &copy; 2015 Mahmoud Hashemi <img height="14" src="/img/by-sa.png" />
+
+dev:
+  server_host: 0.0.0.0
+  server_port: 8080
+  base_url: /
+
+prod:
+  canonical_domain: http://sedimental.org
+  canonical_base_path: /
