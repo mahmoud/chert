@@ -34,12 +34,12 @@
             <p id="tagline-p">{site.tagline}</p>
             {?site.main_links}<p id="main-links-p">
               {#site.main_links}
-              <a title="{.title}" href="{.href}">{.text}</a>
+              <a title="{.desc}" href="{.href}">{.text}</a>
               {/site.main_links}
             </p>{/site.main_links}
             {?site.alt_links}<p id="alt-links-p">
             {#site.alt_links}
-              <a title="{.title}" href="{.href}">{.text}</a>
+              <a title="{.desc}" href="{.href}">{.text}</a>
             {/site.alt_links}
             </p>{/site.alt_links}
           </header>

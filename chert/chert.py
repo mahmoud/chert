@@ -43,6 +43,7 @@ Features:
 """
 
 CUR_PATH = os.path.dirname(abspath(__file__))
+_EPOCH_DATE = datetime.utcfromtimestamp(0)
 
 SITE_TITLE = 'Chert'
 SITE_HEAD_TITLE = SITE_TITLE  # goes in the head tag
@@ -146,9 +147,12 @@ class Chert(object):
 
     def get_site_info(self):
         ret = {}
+        site_config = self.config.get('site', {})
         ret['title'] = SITE_TITLE
         ret['head_title'] = SITE_HEAD_TITLE
-        ret['main_links'] = self.config.get('site', {}).get('main_links', [])
+        ret['tagline'] = site_config.get('tagline', '')
+        ret['main_links'] = site_config.get('main_links', [])
+        ret['alt_links'] = site_config.get('alt_links', [])
         ret['copyright_notice'] = SITE_COPYRIGHT
         ret['author_name'] = SITE_AUTHOR
         ret['canonical_url'] = CANONICAL_URL
@@ -344,9 +348,6 @@ def _iter_changed_files(entries_path, theme_path, interval=0.5):
         if changed:
             yield changed
         time.sleep(interval)
-
-
-_EPOCH_DATE = datetime.utcfromtimestamp(0)
 
 
 """
