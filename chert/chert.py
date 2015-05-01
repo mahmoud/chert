@@ -99,12 +99,15 @@ class Chert(object):
         # setting up paths
         self.paths = OMD()
         self._paths = OMD()  # for the raw input paths
-        self._set_path('input_path', input_path)
-        self._set_path('entries_path', kw.pop('entries_path', None), 'entries')
-        self._set_path('theme_path', kw.pop('theme_path', None), 'theme')
-        self._set_path('output_path', kw.pop('output_path', None), 'site',
-                       required=False)
 
+        set_path = self._set_path
+        set_path('input_path', input_path)
+        set_path('config_path', kw.pop('config_path', None), 'config.yaml')
+        set_path('entries_path', kw.pop('entries_path', None), 'entries')
+        set_path('theme_path', kw.pop('theme_path', None), 'theme')
+        set_path('output_path', kw.pop('output_path', None), 'site',
+                 required=False)
+        self.config = yaml.load(open(self.paths['config_path']))
         self.last_load = None
         self._autoload = kw.pop('autoload', None)
         if self._autoload:
@@ -153,7 +156,7 @@ class Chert(object):
         ret['canonical_url'] = CANONICAL_URL
         ret['canonical_domain'] = CANONICAL_DOMAIN
         ret['canonical_base_path'] = CANONICAL_BASE_PATH
-        ret['last_updated'] = '2014-10-29T00:00:00-06:00'
+        ret['last_generated'] = format_date(datetime.now())
         ret['export_html_ext'] = EXPORT_HTML_EXT
         return ret
 
@@ -191,7 +194,7 @@ class Chert(object):
                 print 'warning: skipping unopenable entry: %r' % ep
             else:
                 self.entries.append(entry)
-        self.entries.sort(key=lambda e: e.publish_date or datetime)
+        self.entries.sort(key=lambda e: e.publish_date or datetime.now())
 
     def validate(self):
         dup_id_map = {}
