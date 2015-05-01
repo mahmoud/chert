@@ -42,6 +42,9 @@
 }
 
 pre {
+    border-top: solid 1px #DDD;
+    border-bottom: solid 1px #DDD;
+    padding: 1.3rem;
     font-size: 1.3rem;
 }
 
