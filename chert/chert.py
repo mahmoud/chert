@@ -45,9 +45,12 @@ Eventual features:
 
  - image/static content workflow
 """
+CUR_PATH = os.path.dirname(abspath(__file__))
 
 SITE_TITLE = 'Chert'
+SITE_HEAD_TITLE = SITE_TITLE  # goes in the head tag
 SITE_AUTHOR = 'Mahmoud Hashemi'
+SITE_COPYRIGHT = '&copy; 2015 Mahmoud Hashemi <img height="14" src="/img/by-sa.png" />'
 
 PREV_ENTRY_COUNT, NEXT_ENTRY_COUNT = 5, 5
 LENGTH_BOUNDARIES = [(0, 'short'),
@@ -110,9 +113,24 @@ class Chert(object):
         self.md_renderer = Markdown(extensions=MD_EXTENSIONS)
         self.inline_md_renderer = Markdown(extensions=INLINE_MD_EXTENSIONS)
 
+        default_atom_tmpl_path = pjoin(CUR_PATH, 'atom.xml')
+        atom_tmpl_path = pjoin(self.theme_path, 'atom.xml')
+        if not os.path.exists(atom_tmpl_path):
+            atom_tmpl_path = default_atom_tmpl_path  # TODO: integrate
+
         self.atom_template = Template('atom.xml', ATOM_TMPL)
 
     def _set_path(self, name, path, default_prefix=None, required=True):
+        """Set a path.
+
+        Args:
+            name: name of attribute (e.g., input_path)
+            path: the path or None
+            default_prefix: if path is None, self.input_path +
+                default_prefix is used. The input_path should already
+                be set.
+            required: raise an error if path does not exist
+        """
         self._paths[name] = path
         if path:
             self.paths[name] = abspath(path)
@@ -129,6 +147,8 @@ class Chert(object):
     def get_site_info(self):
         ret = {}
         ret['title'] = SITE_TITLE
+        ret['head_title'] = SITE_HEAD_TITLE
+        ret['copyright_notice'] = SITE_COPYRIGHT
         ret['author_name'] = SITE_AUTHOR
         ret['canonical_url'] = CANONICAL_URL
         ret['canonical_domain'] = CANONICAL_DOMAIN
@@ -208,8 +228,8 @@ class Chert(object):
         site_info = self.get_site_info()
         for entry in entries:
             tmpl_name = entry.layout + LAYOUT_EXT
-            render_ctx = dict(entry=entry.to_dict(with_links=True),
-                              site=site_info)
+            render_ctx = {'entry': entry.to_dict(with_links=True),
+                          'site': site_info}
             rendered_html = self.html_renderer.render(tmpl_name, render_ctx)
             entry.rendered_html = rendered_html
 
