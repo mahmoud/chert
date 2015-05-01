@@ -40,11 +40,8 @@ Features:
  - length semantics
  - atom
  - footnotes
-
-Eventual features:
-
- - image/static content workflow
 """
+
 CUR_PATH = os.path.dirname(abspath(__file__))
 
 SITE_TITLE = 'Chert'
@@ -151,6 +148,7 @@ class Chert(object):
         ret = {}
         ret['title'] = SITE_TITLE
         ret['head_title'] = SITE_HEAD_TITLE
+        ret['main_links'] = self.config.get('site', {}).get('main_links', [])
         ret['copyright_notice'] = SITE_COPYRIGHT
         ret['author_name'] = SITE_AUTHOR
         ret['canonical_url'] = CANONICAL_URL

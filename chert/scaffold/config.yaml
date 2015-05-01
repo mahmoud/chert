@@ -4,6 +4,16 @@ site:
   author: Mahmoud Hashemi
   copyright: >-
     &copy; 2015 Mahmoud Hashemi <img height="14" src="/img/by-sa.png" />
+  main_links:
+    - text: About
+      href: /about.html
+    - text: Github
+      href: https://github.com/mahmoud
+    - text: Twitter
+      href: https://twitter.com/mhashemi
+    - text: Hatnote
+      href: https://blog.hatnote.com
+      desc: Wikipedia-based projects
 
 dev:
   server_host: 0.0.0.0
