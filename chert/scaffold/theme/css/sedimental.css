@@ -42,8 +42,9 @@
 }
 
 pre {
-    border-top: solid 1px #DDD;
-    border-bottom: solid 1px #DDD;
+    /* display: inline-block; */
+    border-top: solid 1px #CCC;
+    border-bottom: solid 1px #CCC;
     padding: 1.3rem;
     font-size: 1.3rem;
 }
@@ -54,6 +55,30 @@ span.tags {
 
 span.tags a {
     color: #AAA;
+}
+
+div.footnote {
+    font-size: 1.3rem;
+}
+
+div.footnote hr {
+    /* border: none; */
+    border-top: 2px solid #CCC;
+    margin: 10px 0;
+    text-align: center;
+}
+
+div.footnote hr:after {
+    content: "#";
+    display: inline-block;
+    position: relative;
+    top: -1.1rem;
+    padding: 0 0.25rem;
+    background: white;
+}
+
+div.footnote ol {
+    list-style: outside none decimal;
 }
 
 /* real footer styles */
