@@ -11,10 +11,12 @@ appear last in the archive. This should make a [colophon][colophon]
 the [King's Pawn Game][kingspawn] of web authorship.
 
 This site is generated with [Chert][chert_github], an open-source
-static site generator built with [Python][python], [Markdown][markdown], and [YAML][yaml].
+static site generator built with [Python][python],
+[Markdown][markdown][^emd], and [YAML][yaml].
 
-No programming-enabled blog would be complete without a particular
-code snippet, with highlighting provided by [pygments][pygments]:
+Now the time has come for that ubiquitous code snippet, universally
+expected in software, with highlighting provided by
+[pygments][pygments]:
 
     :::python
     def greet(name):
@@ -26,11 +28,15 @@ code snippet, with highlighting provided by [pygments][pygments]:
 
 **Hello, world!**
 
+[^emd]: Enhanced Markdown, including support for [footnotes][footnotes], [definition lists][deflists], and [tables of contents][tocs].
 
 [colophon]: https://en.wiktionary.org/wiki/colophon
 [kingspawn]: https://en.wikipedia.org/wiki/King's_Pawn_Game
 [chert_github]: https://github.com/mahmoud/chert
 [python]: http://python.org
 [markdown]: https://en.wikipedia.org/wiki/Markdown
+[footnotes]: https://pythonhosted.org/Markdown/extensions/footnotes.html#syntax
+[deflists]: https://pythonhosted.org/Markdown/extensions/definition_lists.html#syntax
+[tocs]: https://pythonhosted.org/Markdown/extensions/toc.html#syntax
 [yaml]: https://en.wikipedia.org/wiki/YAML
 [pygments]: http://pygments.org/
