@@ -88,6 +88,7 @@ if not CANONICAL_BASE_PATH.endswith('/'):
 CANONICAL_URL = CANONICAL_DOMAIN + CANONICAL_BASE_PATH
 
 DEFAULT_LAYOUT = 'entry'
+_UNSET = object()
 
 
 class Chert(object):
@@ -147,9 +148,25 @@ class Chert(object):
                                    % (name, self.paths[name]))
         return
 
+    def get_config(self, section, key=None, default=_UNSET):
+        try:
+            section_map = self.config[section]
+        except KeyError:
+            if default is _UNSET:
+                raise
+            return default
+        if key is None:
+            return section_map
+        try:
+            return section_map[key]
+        except KeyError:
+            if default is _UNSET:
+                raise
+            return default
+
     def get_site_info(self):
         ret = {}
-        site_config = self.config.get('site', {})
+        site_config = self.get_config('site')
         ret['title'] = SITE_TITLE
         ret['head_title'] = SITE_HEAD_TITLE
         ret['tagline'] = site_config.get('tagline', '')
@@ -171,6 +188,10 @@ class Chert(object):
     @property
     def theme_path(self):
         return self.paths['theme_path']
+
+    @property
+    def output_path(self):
+        return self.paths['output_path']
 
     def process(self):
         if not self.last_load:
@@ -317,15 +338,21 @@ class Chert(object):
             if not serving:
                 serving = True
 
-    def publish():  # deploy?
-        rsync_cmd = 'rsync'  # TODO: quote
-        rsync_flags = 'avzP'
-        local_site_path = 'scaffold/site/'
-        assert local_site_path.endswith('/')
+    def publish(self):  # deploy?
+        prod_config = self.get_config('prod')
+        rsync_cmd = prod_config.get('rsync_cmd', 'rsync')
+        if not rsync_cmd.isalpha():
+            rsync_cmd = shell_quote(rsync_cmd)
+        # TODO: add -e 'ssh -o "NumberOfPasswordPrompts 0"' to fail if
+        # ssh keys haven't been set up.
+        rsync_flags = prod_config.get('rsync_flags', 'avzP')
+        local_site_path = self.output_path
+        if not local_site_path.endswith('/'):
+            local_site_path += '/'  # not just cosmetic; rsync needs this
         assert os.path.exists(local_site_path + 'index.html')
-        remote_host = 'sedimental.org'
-        remote_user = 'mahmoud'
-        remote_path = '/home/mahmoud/sedimental/public'
+        remote_host = prod_config['remote_host']
+        remote_user = prod_config['remote_user']
+        remote_path = prod_config['remote_path']
         remote_slug = "%s@%s:'%s'" % (remote_user,
                                       remote_host,
                                       shell_quote(remote_path))
@@ -498,6 +525,6 @@ def read_yaml_text(path):
 
 
 if __name__ == '__main__':
-    publish()
-    #ch = Chert('scaffold')
+    ch = Chert('scaffold')
+    ch.publish()
     #ch.serve()

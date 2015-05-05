@@ -24,3 +24,8 @@ dev:
 prod:
   canonical_domain: http://sedimental.org
   canonical_base_path: /
+  remote_host: sedimental.org
+  remote_user: mahmoud
+  remote_path: /home/mahmoud/sedimental/public
+  # rsync_cmd: rsync
+  # rsync_flags: avzP
