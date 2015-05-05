@@ -7,11 +7,13 @@ import time
 import string
 import hashlib
 import itertools
+import subprocess
 from datetime import datetime
 from os.path import abspath, join as pjoin
 from SimpleHTTPServer import SimpleHTTPRequestHandler
 from BaseHTTPServer import HTTPServer
 from threading import Thread
+from pipes import quote as shell_quote
 
 import yaml
 from markdown import Markdown
@@ -315,6 +317,32 @@ class Chert(object):
             if not serving:
                 serving = True
 
+    def publish():  # deploy?
+        rsync_cmd = 'rsync'  # TODO: quote
+        rsync_flags = 'avzP'
+        local_site_path = 'scaffold/site/'
+        assert local_site_path.endswith('/')
+        assert os.path.exists(local_site_path + 'index.html')
+        remote_host = 'sedimental.org'
+        remote_user = 'mahmoud'
+        remote_path = '/home/mahmoud/sedimental/public'
+        remote_slug = "%s@%s:'%s'" % (remote_user,
+                                      remote_host,
+                                      shell_quote(remote_path))
+
+        full_rsync_cmd = '%s -%s %s %s' % (rsync_cmd,
+                                           rsync_flags,
+                                           local_site_path,
+                                           remote_slug)
+        print 'Executing', full_rsync_cmd
+        try:
+            rsync_output = subprocess.check_output(full_rsync_cmd, shell=True)
+        except subprocess.CalledProcessError as cpe:
+            return_code = cpe.returncode
+            rsync_output = cpe.output
+            print 'Failed to rsync, exit code', return_code
+        print rsync_output
+
 
 def get_subdirectories(path):
     "Returns a list of directory names (not absolute paths) in a given path."
@@ -470,5 +498,6 @@ def read_yaml_text(path):
 
 
 if __name__ == '__main__':
-    ch = Chert('scaffold')
-    ch.serve()
+    publish()
+    #ch = Chert('scaffold')
+    #ch.serve()
