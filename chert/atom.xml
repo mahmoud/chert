@@ -1,25 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom" xmlns:thr="http://purl.org/syndication/thread/1.0" xml:lang="en">
-  <title type="text">{site.title}</title>
-  <subtitle type="text">{site.description}</subtitle>
-  <updated></updated>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/" xml:lang="en-US">
   <id>{site.canonical_url}</id>
+  <title type="text">{site.title}</title>
+  <subtitle type="text">{site.tagline}</subtitle>
   <link rel="alternate" type="text/html" href="{site.canonical_url}" />
   <link rel="self" type="application/atom+xml" href="{site.feed_url}" />
   <updated>{site.last_generated}</updated>
-  <generator uri="https://github.com/mahmoud/chert">Chert</generator>
+  <rights type="html">{site.copyright_notice}</rights>
+  <generator uri="https://github.com/mahmoud/chert">Chert 0.1</generator>
   {#entries}
   <entry>
-    <author><name>{.author_name}</name></author>
+    <id>{site.canonical_url}{.output_filename}</id>
+    <author>
+      <name>{#.author_name}{.author_name}{:else}{site.author_name}{/author_name}</name>
+      <uri>{site.canonical_url}</uri>
+    </author>
     <title>{.title}</title>
-    <link rel="alternate" type="text/html" href="" />
-    <published></published>
-    <updated></updated>
-    <content type="xhtml">
-      <div xmlns="http://www.w3.org/1999/xhtml">
-        {.inline_rendered_content}
-      </div>
-    </content>
+    <link rel="alternate" type="text/html" href="{site.canonical_url}{.output_filename}" />
+    <published>{.publish_date}</published>
+    <updated>{?.update_date}{.update_date}{:else}{.publish_date}{/update_date}</updated>
+    {#tags}<category term="{.}"/>{/tags}
+    <content type="html">{.inline_rendered_content}</content>
   </entry>
   {/entries}
 </feed>
