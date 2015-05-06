@@ -501,11 +501,11 @@ class Entry(object):
             ret['prev_entries'] = [pe.to_dict() for pe in self.prev_entries]
             ret['next_entries'] = [ne.to_dict() for ne in self.next_entries]
 
-        ret['publish_date'] = format_date(self.publish_date)
+        ret['publish_date_iso8601'] = format_date(self.publish_date)
         if self.last_edit_date:
-            ret['update_date'] = format_date(self.last_edit_date)
+            ret['update_date_iso8601'] = format_date(self.last_edit_date)
         else:
-            ret['update_date'] = None
+            ret['update_date_iso8601'] = None
         ret['output_filename'] = ret['entry_id'] + EXPORT_HTML_EXT
         return ret
 

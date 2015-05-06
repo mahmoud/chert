@@ -17,8 +17,8 @@
     </author>
     <title>{.title}</title>
     <link rel="alternate" type="text/html" href="{site.canonical_url}{.output_filename}" />
-    <published>{.publish_date}</published>
-    <updated>{?.update_date}{.update_date}{:else}{.publish_date}{/update_date}</updated>
+    <published>{.publish_date_iso8601}</published>
+    <updated>{?.update_date_iso8601}{.update_date_iso8601}{:else}{.publish_date_iso8601}{/update_date_iso8601}</updated>
     {#tags}<category term="{.}"/>{/tags}
     <content type="html">{.inline_rendered_content}</content>
   </entry>
