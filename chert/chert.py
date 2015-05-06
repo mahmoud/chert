@@ -26,7 +26,7 @@ from ashes import AshesEnv, Template
 from markdown.extensions.codehilite import CodeHiliteExtension
 from dateutil.parser import parse
 
-from feed import absolutify, ATOM_TMPL
+
 
 DEBUG = False
 if DEBUG:
@@ -91,6 +91,13 @@ DEFAULT_LAYOUT = 'entry'
 _UNSET = object()
 
 
+_link_re = re.compile("((?P<attribute>src|href)=\"/)")
+
+def canonicalize_links(text, base):
+    # turns links into canonical links for RSS
+    return _link_re.sub(r'\g<attribute>="' + base + '/', text)
+
+
 class Chert(object):
     def __init__(self, input_path, **kw):
         self.entries = []
@@ -120,9 +127,9 @@ class Chert(object):
         default_atom_tmpl_path = pjoin(CUR_PATH, 'atom.xml')
         atom_tmpl_path = pjoin(self.theme_path, 'atom.xml')
         if not os.path.exists(atom_tmpl_path):
-            atom_tmpl_path = default_atom_tmpl_path  # TODO: integrate
+            atom_tmpl_path = default_atom_tmpl_path
 
-        self.atom_template = Template('atom.xml', ATOM_TMPL)
+        self.atom_template = Template('atom.xml', open(atom_tmpl_path).read())
 
     def _set_path(self, name, path, default_prefix=None, required=True):
         """Set a path.
@@ -177,6 +184,7 @@ class Chert(object):
         ret['canonical_url'] = CANONICAL_URL
         ret['canonical_domain'] = CANONICAL_DOMAIN
         ret['canonical_base_path'] = CANONICAL_BASE_PATH
+        ret['feed_url'] = CANONICAL_URL + 'atom.xml'
         ret['last_generated'] = format_date(datetime.now())
         ret['export_html_ext'] = EXPORT_HTML_EXT
         return ret
@@ -248,8 +256,8 @@ class Chert(object):
         for e in entries:
             e.rendered_content = mdr.convert(e.content)
             mdr.reset()
-            e.inline_rendered_content = absolutify(imdr.convert(e.content),
-                                                   CANONICAL_DOMAIN)
+            e.inline_rendered_content = canonicalize_links(imdr.convert(e.content),
+                                                           CANONICAL_DOMAIN)
             imdr.reset()
 
         # render html
@@ -262,13 +270,19 @@ class Chert(object):
             entry.rendered_html = rendered_html
 
         # render feed
-        rendered_feed = self.atom_template.render('atom.xml', {})
+        entry_ctxs = [e.to_dict(with_links=True) for e in entries]
+        feed_render_ctx = {'entries': entry_ctxs,
+                           'site': site_info}
+        self.rendered_feed = self.atom_template.render(feed_render_ctx)
         # print rendered_feed
 
     def audit(self):
         """
         Validation of rendered content, to be used for link checking.
         """
+        # TODO: check for &nbsp; and other common HTML entities in
+        # feed xml (these entities aren't supported in XML/Atom/RSS)
+        # the only ok ones are here: https://en.wikipedia.org/wiki/List_of_XML_and_HTML_character_entity_references#Predefined_entities_in_XML
         pass
 
     def export(self):
@@ -291,6 +305,11 @@ class Chert(object):
             index_content = 'No entries yet!'
         with open(index_path, 'w') as f:
             f.write(index_content.encode('utf-8'))
+
+        # atom feed
+        atom_path = pjoin(output_path, 'atom.xml')
+        with open(atom_path, 'w') as f:
+            f.write(self.rendered_feed.encode('utf-8'))
 
         # copy all directories under the theme path
         for sdn in get_subdirectories(self.theme_path):
@@ -367,8 +386,11 @@ class Chert(object):
         except subprocess.CalledProcessError as cpe:
             return_code = cpe.returncode
             rsync_output = cpe.output
-            print 'Failed to rsync, exit code', return_code
-        print rsync_output
+            print rsync_output
+            print 'Publish failed, rsync got exit code', return_code
+        else:
+            print rsync_output
+            print 'Publish succeeded.'
 
 
 def get_subdirectories(path):
@@ -425,7 +447,7 @@ class Entry(object):
         self.publish_date = parse(pub_date) if pub_date else _EPOCH_DATE
 
         self.edit_list = []
-        self.last_edit_date = None or self.publish_date
+        self.last_edit_date = None  # TODO
 
         # TODO: needs to be set at process time, as prev/next links change
         hash_content = (self.title + self.content).encode('utf-8')
@@ -471,6 +493,7 @@ class Entry(object):
                    entry_id=self.entry_id)
         try:
             ret['rendered_content'] = self.rendered_content
+            ret['inline_rendered_content'] = self.inline_rendered_content
         except AttributeError as ae:
             print '---', ae, self.title
 
@@ -478,7 +501,12 @@ class Entry(object):
             ret['prev_entries'] = [pe.to_dict() for pe in self.prev_entries]
             ret['next_entries'] = [ne.to_dict() for ne in self.next_entries]
 
-        ret['filename'] = ret['entry_id'] + EXPORT_HTML_EXT
+        ret['publish_date'] = format_date(self.publish_date)
+        if self.last_edit_date:
+            ret['update_date'] = format_date(self.last_edit_date)
+        else:
+            ret['update_date'] = None
+        ret['output_filename'] = ret['entry_id'] + EXPORT_HTML_EXT
         return ret
 
 
@@ -526,5 +554,5 @@ def read_yaml_text(path):
 
 if __name__ == '__main__':
     ch = Chert('scaffold')
-    ch.publish()
-    #ch.serve()
+    ch.process()
+    ch.serve()
