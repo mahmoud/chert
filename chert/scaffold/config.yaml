@@ -1,20 +1,18 @@
 ---
 site:
   title: Chert
-  author: Mahmoud Hashemi
-  tagline: Thought accretion by Mahmoud Hashemi
+  author: Chert Chertington
+  tagline: Sharp and sparky static sites
   copyright: >-
-    &copy; 2015 Mahmoud Hashemi <img height="14" src="/img/by-sa.png" />
+    &copy; 2015 <img height="14" src="/img/by-sa.png" />
   main_links:
     - text: About
       href: /about.html
     - text: Github
-      href: https://github.com/mahmoud
+      href: https://github.com/mahmoud/chert
+      desc: Chert source code
     - text: Twitter
       href: https://twitter.com/mhashemi
-    - text: Hatnote
-      href: https://blog.hatnote.com
-      desc: Wikipedia-based projects
 
 dev:
   server_host: 0.0.0.0
@@ -25,7 +23,7 @@ prod:
   canonical_domain: http://sedimental.org
   canonical_base_path: /
   remote_host: sedimental.org
-  remote_user: mahmoud
-  remote_path: /home/mahmoud/sedimental/public
+  remote_user: chert_user
+  remote_path: /home/chert_user/my_site/public
   # rsync_cmd: rsync
   # rsync_flags: avzP
