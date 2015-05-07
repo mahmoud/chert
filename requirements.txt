@@ -1,10 +1,7 @@
-Markdown==2.5.1
-PyYAML==3.11
-Pygments==1.6
-argparse==1.2.1
 -e git+git@github.com:mahmoud/ashes.git@5660f6ac2d277f7ba751c5aa1c09e52ed9d7d033#egg=ashes-master
 -e git+git@github.com:mahmoud/boltons.git@a8d95e077157d94851eb9823f61baf92150f2ae2#egg=boltons-master
-docopt==0.6.2
+Markdown==2.6.2
+Pygments==1.6
 python-dateutil==2.2
+PyYAML==3.11
 six==1.8.0
-wsgiref==0.1.2
