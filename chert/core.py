@@ -19,9 +19,9 @@ from pipes import quote as shell_quote
 import yaml
 from markdown import Markdown
 from boltons.tbutils import ExceptionInfo
-from boltons.osutils import mkdir_p, copytree, iter_find_files
 from boltons.strutils import slugify
 from boltons.dictutils import OrderedMultiDict as OMD
+from boltons.fileutils import mkdir_p, copytree, iter_find_files
 from boltons.debugutils import pdb_on_signal
 from ashes import AshesEnv, Template
 from dateutil.parser import parse
