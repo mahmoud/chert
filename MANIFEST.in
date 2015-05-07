@@ -1,0 +1,8 @@
+include README.md LICENSE
+recursive-include chert *
+
+recursive-exclude *.egg-info *
+recursive-exclude chert/scaffold_old *
+recursive-exclude * *.py[co]
+recursive-exclude * *.coverage
+recursive-exclude * __pycache__
