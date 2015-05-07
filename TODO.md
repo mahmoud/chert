@@ -22,3 +22,5 @@
 * Also upload source code/gen source code links
 
 * --clean option (effectively removes any unused files from site/)
+
+* tag pages
