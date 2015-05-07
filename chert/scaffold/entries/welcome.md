@@ -8,7 +8,7 @@ tags:
 
 Most blogs, including this one, are reverse-chronologically ordered,
 causing the first post to appear last in the archive. This convention
-makes a [colophon][colophon] the [King's Pawn Game][kingspawn] of web
+makes a *[colophon][colophon]* the [King's Pawn Game][kingspawn] of web
 authorship; there's no better place to showcase certain implementation
 details than the first post of a blog.
 
@@ -16,7 +16,7 @@ This site is generated with [Chert][chert_github], an open-source
 static site generator built with [Python][python],
 [Markdown][markdown][^emd], and [YAML][yaml]. Chert is named for a
 very common [fine-grained sedimentary rock][chert_rock], often
-referred to as flint, that has been of critical use to firestarters
+referred to as *flint*, that has been of critical use to firestarters
 through the ages.
 
 Now it's time for that very special and very ubiquitous code snippet,
