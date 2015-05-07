@@ -6,6 +6,7 @@ import os
 import time
 import string
 import hashlib
+import argparse
 import itertools
 import subprocess
 from datetime import datetime
@@ -31,18 +32,6 @@ from markdown.extensions.codehilite import CodeHiliteExtension
 DEBUG = False
 if DEBUG:
     pdb_on_signal()
-
-"""
-(notes)
-
-Features:
-
- - simple edit history (not git integrated or anything fancy)
- - tags
- - length semantics
- - atom
- - footnotes
-"""
 
 CUR_PATH = os.path.dirname(abspath(__file__))
 DEFAULT_DATE = datetime(2000, 1, 1)
@@ -562,7 +551,6 @@ def read_yaml_text(path):
         return yaml_dict, text_content
 
 
-import argparse
 def get_argparser():
     prs = argparse.ArgumentParser()
     subprs = prs.add_subparsers(dest='action',
@@ -597,10 +585,15 @@ def main():
         ch = Chert(os.getcwd())
         ch.process()
     elif action == 'init':
-        print 'IOU'
+        target_dir = abspath(kwargs['target_dir'])
+        if os.path.exists(target_dir):
+            raise RuntimeError('chert init failed, path already exists: %s'
+                               % target_dir)
+        src_dir = pjoin(CUR_PATH, 'scaffold')
+        copytree(src_dir, target_dir)
+        print 'Created Chert instance in directory: %s' % target_dir
     else:
         raise ValueError('unknown action: %s' % action)
-
 
 if __name__ == '__main__':
     main()
