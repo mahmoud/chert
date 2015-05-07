@@ -23,6 +23,7 @@ setup(name='chert',
       zip_safe=False,
       license=__license__,
       platforms='any',
+      entry_points={'console_scripts': ['chert = chert.core:main']},
       classifiers=[
           'Intended Audience :: Developers',
           'Topic :: Software Development :: Libraries',
