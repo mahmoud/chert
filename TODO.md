@@ -16,3 +16,9 @@
 * Archive view
 
 * Finish support for non-root-path-based installations
+
+* Instrument with Lithoxyl
+
+* Also upload source code/gen source code links
+
+* --clean option (effectively removes any unused files from site/)
