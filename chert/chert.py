@@ -23,8 +23,9 @@ from boltons.strutils import slugify
 from boltons.dictutils import OrderedMultiDict as OMD
 from boltons.debugutils import pdb_on_signal
 from ashes import AshesEnv, Template
-from markdown.extensions.codehilite import CodeHiliteExtension
 from dateutil.parser import parse
+from markdown.extensions.toc import TocExtension
+from markdown.extensions.codehilite import CodeHiliteExtension
 
 
 DEBUG = False
@@ -57,11 +58,12 @@ LENGTH_BOUNDARIES = [(0, 'short'),
                      (1000, 'manifesto')]
 READING_WPM = 200.0
 
-BASE_MD_EXTENSIONS = ['markdown.extensions.toc',
-                      'markdown.extensions.def_list',
+BASE_MD_EXTENSIONS = ['markdown.extensions.def_list',
                       'markdown.extensions.footnotes']
 _HILITE = CodeHiliteExtension()
-MD_EXTENSIONS = BASE_MD_EXTENSIONS + [_HILITE]
+_TOC_EXTENSION = TocExtension(title='Contents', anchorlink=True, baselevel=2)
+# baselevel is actually a really useful feature regardless of TOC usage
+MD_EXTENSIONS = BASE_MD_EXTENSIONS + [_HILITE, _TOC_EXTENSION]
 _HILITE_INLINE = CodeHiliteExtension(noclasses=True,
                                      pygments_style='emacs')
 INLINE_MD_EXTENSIONS = BASE_MD_EXTENSIONS + [_HILITE_INLINE]
@@ -179,6 +181,7 @@ class Chert(object):
         ret['tagline'] = site_config.get('tagline', '')
         ret['main_links'] = site_config.get('main_links', [])
         ret['alt_links'] = site_config.get('alt_links', [])
+        ret['lang_code'] = site_config.get('lang_code', 'en')
         ret['copyright_notice'] = SITE_COPYRIGHT
         ret['author_name'] = SITE_AUTHOR
         ret['canonical_url'] = CANONICAL_URL
