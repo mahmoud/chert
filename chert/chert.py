@@ -562,8 +562,45 @@ def read_yaml_text(path):
         return yaml_dict, text_content
 
 
+import argparse
+def get_argparser():
+    prs = argparse.ArgumentParser()
+    subprs = prs.add_subparsers(dest='action',
+                                help='chert supports init, serve, and publish'
+                                ' subcommands')
+    init_prs = subprs.add_parser('init',
+                                 help='create a new Chert site')
+    init_prs.add_argument('target_dir',
+                          help='path of a non-existent directory to'
+                          ' create a new Chert site')
+    subprs.add_parser('serve',
+                      help='work on a Chert site using the local server')
+    subprs.add_parser('render',
+                      help='generate a local copy of the site')
+    subprs.add_parser('publish',
+                      help='upload a Chert site to the remote server')
+    return prs
+
+
+def main():
+    prs = get_argparser()
+    kwargs = dict(prs.parse_args()._get_kwargs())
+    action = kwargs['action']
+    if action == 'serve':
+        ch = Chert(os.getcwd())
+        ch.serve()
+    elif action == 'publish':
+        ch = Chert(os.getcwd())
+        ch.process()
+        ch.publish()
+    elif action == 'render':
+        ch = Chert(os.getcwd())
+        ch.process()
+    elif action == 'init':
+        print 'IOU'
+    else:
+        raise ValueError('unknown action: %s' % action)
+
+
 if __name__ == '__main__':
-    ch = Chert('scaffold')
-    #ch.process()
-    #ch.publish()
-    ch.serve()
+    main()
