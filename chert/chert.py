@@ -27,7 +27,6 @@ from markdown.extensions.codehilite import CodeHiliteExtension
 from dateutil.parser import parse
 
 
-
 DEBUG = False
 if DEBUG:
     pdb_on_signal()
@@ -45,7 +44,7 @@ Features:
 """
 
 CUR_PATH = os.path.dirname(abspath(__file__))
-_EPOCH_DATE = datetime.utcfromtimestamp(0)
+DEFAULT_DATE = datetime(2000, 1, 1)
 
 SITE_TITLE = 'Chert'
 SITE_HEAD_TITLE = SITE_TITLE  # goes in the head tag
@@ -92,6 +91,7 @@ _UNSET = object()
 
 
 _link_re = re.compile("((?P<attribute>src|href)=\"/)")
+
 
 def canonicalize_links(text, base):
     # turns links into canonical links for RSS
@@ -184,7 +184,8 @@ class Chert(object):
         ret['canonical_url'] = CANONICAL_URL
         ret['canonical_domain'] = CANONICAL_DOMAIN
         ret['canonical_base_path'] = CANONICAL_BASE_PATH
-        ret['feed_url'] = CANONICAL_URL + 'atom.xml'
+        ret['feed_url'] = CANONICAL_BASE_PATH + 'atom.xml'
+        ret['canonical_feed_url'] = ret['feed_url'] + 'atom.xml'
         ret['last_generated'] = format_date(datetime.now())
         ret['export_html_ext'] = EXPORT_HTML_EXT
         return ret
@@ -201,8 +202,8 @@ class Chert(object):
     def output_path(self):
         return self.paths['output_path']
 
-    def process(self):
-        if not self.last_load:
+    def process(self, reread=False):
+        if reread or not self.last_load:
             self.load()
         self.validate()
         self.preprocess()
@@ -227,7 +228,8 @@ class Chert(object):
                 print 'warning: skipping unopenable entry: %r' % ep
             else:
                 self.entries.append(entry)
-        self.entries.sort(key=lambda e: e.publish_date or datetime.now())
+        self.entries.sort(key=lambda e: e.publish_date or datetime.now(),
+                          reverse=True)
 
     def validate(self):
         dup_id_map = {}
@@ -245,9 +247,9 @@ class Chert(object):
         std_pub_entries = [e for e in self.entries
                            if not e.is_special and not e.is_draft]
         for i, entry in enumerate(std_pub_entries, start=1):
-            start_prev = max(0, i - PREV_ENTRY_COUNT)
-            entry.prev_entries = std_pub_entries[start_prev:i - 1][::-1]
-            entry.next_entries = std_pub_entries[i:i + NEXT_ENTRY_COUNT]
+            start_next = max(0, i - NEXT_ENTRY_COUNT)
+            entry.next_entries = std_pub_entries[start_next:i - 1][::-1]
+            entry.prev_entries = std_pub_entries[i:i + PREV_ENTRY_COUNT]
 
     def render(self):
         entries = self.entries
@@ -295,15 +297,17 @@ class Chert(object):
             cur_output_path = pjoin(output_path, entry_fn)
 
             with open(cur_output_path, 'w') as f:
+                print 'writing to', cur_output_path
                 f.write(entry.rendered_html.encode('utf-8'))
 
         # index is just the most recent entry for now
         index_path = pjoin(output_path, 'index' + EXPORT_HTML_EXT)
         if self.entries:
-            index_content = self.entries[-1].rendered_html
+            index_content = self.entries[0].rendered_html
         else:
             index_content = 'No entries yet!'
         with open(index_path, 'w') as f:
+            print 'writing to', index_path
             f.write(index_content.encode('utf-8'))
 
         # atom feed
@@ -313,7 +317,10 @@ class Chert(object):
 
         # copy all directories under the theme path
         for sdn in get_subdirectories(self.theme_path):
-            copytree(pjoin(self.theme_path, sdn), pjoin(output_path, sdn))
+            cur_src_dir = pjoin(self.theme_path, sdn)
+            cur_dest_dir = pjoin(output_path, sdn)
+            print 'copying from', cur_src_dir, 'to', cur_dest_dir
+            copytree(cur_src_dir, cur_dest_dir)
 
     def serve(self):
         host = DEV_SERVER_HOST
@@ -341,7 +348,7 @@ class Chert(object):
                 print 'Changed %s files, regenerating...' % len(changed)
                 server.shutdown()
             try:
-                self.process()
+                self.process(reread=True)
             except KeyboardInterrupt:
                 raise
             except Exception:
@@ -444,7 +451,7 @@ class Entry(object):
         self.metadata = kwargs
 
         pub_date = self.metadata.get('publish_date')
-        self.publish_date = parse(pub_date) if pub_date else _EPOCH_DATE
+        self.publish_date = parse(pub_date) if pub_date else DEFAULT_DATE
 
         self.edit_list = []
         self.last_edit_date = None  # TODO
@@ -555,4 +562,5 @@ def read_yaml_text(path):
 if __name__ == '__main__':
     ch = Chert('scaffold')
     ch.process()
-    ch.serve()
+    ch.publish()
+    #ch.serve()
