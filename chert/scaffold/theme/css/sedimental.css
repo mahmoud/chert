@@ -15,11 +15,23 @@
 
 #header {
     text-align: center;
+    margin-bottom: 2rem;
 }
 
-#header h3 {
+@media (min-width: 750px) {
+    #header {
+        margin-bottom: 0;
+    }
+}
+
+#header h1 {
     margin-top: 5px;
     margin-bottom: 5px;
+}
+
+#header h1 a {
+    color: #222;
+    text-decoration: none;
 }
 
 #previously-div h5 {
@@ -41,6 +53,19 @@
     margin-right: 5px;
 }
 
+dt {
+    font-weight: bold;
+}
+
+dd {
+    margin: 0;
+    padding: 0 0 0.3rem 0.5rem;
+}
+
+dd:before {
+    content: '- ';
+}
+
 pre {
     /* display: inline-block; */
     border-top: solid 1px #CCC;
@@ -59,6 +84,14 @@ span.tags a {
 
 div.footnote {
     font-size: 1.3rem;
+}
+
+div.footnote li {
+    margin-bottom: 0;
+}
+
+div.footnote li p {
+    margin-bottom: 0;
 }
 
 div.footnote hr {
@@ -109,3 +142,48 @@ html, body {
 .footer-push {
     height: auto;
 }
+
+/* Uncomment this to get the same style for manual heading links as the Table of Contents autolinks
+
+h1 a, h2 a, h3 a, h4 a, h5 a {
+    color: #222;
+    text-decoration: none;
+}*/
+
+.toclink {
+    color: #222;
+    text-decoration: none;
+}
+
+.toctitle {
+    font-size: 1.8rem;
+    font-weight: bold;
+}
+
+div.toc ul {
+    list-style-type: decimal;
+    margin: 1rem 0 1rem 2rem;
+}
+
+div.toc > ul {
+    margin-left: 0.5rem;
+}
+
+div.toc li {
+    margin-bottom: 0.5rem;
+}
+
+div.toc {
+    border: 1px solid #CCC;
+    display: inline-block;
+    padding: 0.5rem 0.7rem 0 0.7rem;
+    margin-bottom: 1rem;
+}
+
+/* I found Skeleton's default heading sizes too large for my liking */
+h1 {font-size: 3.5rem;}
+h2 {font-size: 2.5rem;}
+h3 {font-size: 2rem;}
+h4 {font-size: 1.75rem;}
+h5 {font-size: 1.6rem; font-weight: bold;}
+h6 {font-size: 1.5rem; text-decoration: underline;}
