@@ -561,6 +561,6 @@ def read_yaml_text(path):
 
 if __name__ == '__main__':
     ch = Chert('scaffold')
-    ch.process()
-    ch.publish()
-    #ch.serve()
+    #ch.process()
+    #ch.publish()
+    ch.serve()
