@@ -92,6 +92,8 @@ def canonicalize_links(text, base):
 class Chert(object):
     def __init__(self, input_path, **kw):
         self.entries = []
+        self.draft_entries = []
+        self.special_entries = []
 
         self.entry_lists = kw.pop('entry_lists', [])
 
@@ -219,7 +221,12 @@ class Chert(object):
             except IOError as ioe:
                 print 'warning: skipping unopenable entry: %r' % ep
             else:
-                self.entries.append(entry)
+                if entry.is_draft:
+                    self.draft_entries.append(entry)
+                elif entry.is_special:
+                    self.special_entries.append(entry)
+                else:
+                    self.entries.append(entry)
         self.entries.sort(key=lambda e: e.publish_date or datetime.now(),
                           reverse=True)
 
@@ -236,32 +243,37 @@ class Chert(object):
         # TODO: assert necessary templates are present (post.html, etc.)
 
     def preprocess(self):
-        std_pub_entries = [e for e in self.entries
-                           if not e.is_special and not e.is_draft]
-        for i, entry in enumerate(std_pub_entries, start=1):
+        for i, entry in enumerate(self.entries, start=1):
             start_next = max(0, i - NEXT_ENTRY_COUNT)
-            entry.next_entries = std_pub_entries[start_next:i - 1][::-1]
-            entry.prev_entries = std_pub_entries[i:i + PREV_ENTRY_COUNT]
+            entry.next_entries = self.entries[start_next:i - 1][::-1]
+            entry.prev_entries = self.entries[i:i + PREV_ENTRY_COUNT]
 
     def render(self):
         entries = self.entries
         mdr, imdr = self.md_renderer, self.inline_md_renderer
-        # render markdown
-        for e in entries:
-            e.rendered_content = mdr.convert(e.content)
+        site_info = self.get_site_info()
+
+        def render_entry(entry, with_links=False):
+            # first, render Markdown
+            entry.rendered_content = mdr.convert(entry.content)
             mdr.reset()
-            e.inline_rendered_content = canonicalize_links(imdr.convert(e.content),
-                                                           CANONICAL_DOMAIN)
+            entry.inline_rendered_content = canonicalize_links(imdr.convert(entry.content),
+                                                               CANONICAL_DOMAIN)
             imdr.reset()
 
-        # render html
-        site_info = self.get_site_info()
-        for entry in entries:
+            # then render HTML
             tmpl_name = entry.layout + LAYOUT_EXT
-            render_ctx = {'entry': entry.to_dict(with_links=True),
+            render_ctx = {'entry': entry.to_dict(with_links=with_links),
                           'site': site_info}
             rendered_html = self.html_renderer.render(tmpl_name, render_ctx)
             entry.rendered_html = rendered_html
+
+        for entry in entries:
+            render_entry(entry, with_links=True)
+        for entry in self.draft_entries:
+            render_entry(entry)
+        for entry in self.special_entries:
+            render_entry(entry)
 
         # render feed
         entry_ctxs = [e.to_dict(with_links=True) for e in entries]
@@ -284,13 +296,20 @@ class Chert(object):
 
         mkdir_p(output_path)
 
-        for entry in self.entries:
+        def export_entry(entry):
             entry_fn = entry.entry_id + EXPORT_HTML_EXT
             cur_output_path = pjoin(output_path, entry_fn)
 
             with open(cur_output_path, 'w') as f:
                 print 'writing to', cur_output_path
                 f.write(entry.rendered_html.encode('utf-8'))
+
+        for entry in self.entries:
+            export_entry(entry)
+        for entry in self.draft_entries:
+            export_entry(entry)
+        for entry in self.special_entries:
+            export_entry(entry)
 
         # index is just the most recent entry for now
         index_path = pjoin(output_path, 'index' + EXPORT_HTML_EXT)
@@ -458,11 +477,11 @@ class Entry(object):
 
     @property
     def is_special(self):
-        return False
+        return bool(self.metadata.get('special'))
 
     @property
     def is_draft(self):
-        return False  # 'drafts' in tags?
+        return bool(self.metadata.get('draft'))
 
     @property
     def layout(self):
@@ -510,10 +529,19 @@ class Entry(object):
 
 
 class EntryList(object):
-    def __init__(self, title, predicate=None):
-        self.title = title
-        self.predicate = predicate or (lambda e: True)
-        self.entries = OMD()
+    # should end in a slash
+    tag_path_part = 'tagged/'
+
+    # Render HTML and atom feeds for a list of entries
+    def __init__(self, entries, site_info, tag=None):
+        self.entries = entries
+        self.site_info = site_info
+        self.tag = tag
+
+        canonical_feed_url = site_info['canonical_url']
+        if tag:
+            canonical_feed_url += self.tag_path_part
+        canonical_feed_url += 'atom.xml'
 
         # feed url
         # list style (index or all-expanded)
