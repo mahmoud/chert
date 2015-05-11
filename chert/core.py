@@ -201,7 +201,6 @@ class Chert(object):
         if reread or not self.last_load:
             self.load()
         self.validate()
-        self.preprocess()
         self.render()
         self.audit()
         self.export()
@@ -251,8 +250,14 @@ class Chert(object):
                     self.special_entries.append(entry)
                 else:
                     self.entries.append(entry)
+
         self.entries.sort(key=lambda e: e.publish_date or datetime.now(),
                           reverse=True)
+        for i, entry in enumerate(self.entries, start=1):
+            start_next = max(0, i - NEXT_ENTRY_COUNT)
+            entry.next_entries = self.entries[start_next:i - 1][::-1]
+            entry.prev_entries = self.entries[i:i + PREV_ENTRY_COUNT]
+
         self._call_custom_hook('on_load')
 
     def validate(self):
@@ -267,14 +272,6 @@ class Chert(object):
         self._call_custom_hook('on_validate')
 
         # TODO: assert necessary templates are present (post.html, etc.)
-
-    def preprocess(self):
-        # TODO: is this step necessary or should it be merged into load?
-        for i, entry in enumerate(self.entries, start=1):
-            start_next = max(0, i - NEXT_ENTRY_COUNT)
-            entry.next_entries = self.entries[start_next:i - 1][::-1]
-            entry.prev_entries = self.entries[i:i + PREV_ENTRY_COUNT]
-        self._call_custom_hook('on_preprocess')
 
     def render(self):
         entries = self.entries
