@@ -197,9 +197,8 @@ class Chert(object):
     def output_path(self):
         return self.paths['output_path']
 
-    def process(self, reread=False):
-        if reread or not self.last_load:
-            self.load()
+    def process(self):
+        self.load()
         self.validate()
         self.render()
         self.audit()
@@ -387,7 +386,7 @@ class Chert(object):
                 print 'Changed %s files, regenerating...' % len(changed)
                 server.shutdown()
             try:
-                self.process(reread=True)
+                self.process()
             except KeyboardInterrupt:
                 raise
             except Exception:
