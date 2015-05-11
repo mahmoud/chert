@@ -568,21 +568,24 @@ class EntryList(object):
         self.site_info = site_info
         self.tag = tag
 
-        canonical_feed_url = site_info['canonical_url']
+        self.canonical_url = site_info['canonical_url']
         if tag:
-            canonical_feed_url += self.tag_path_part
-        canonical_feed_url += 'atom.xml'
+            self.canonical_url += self.tag_path_part + tag + '/'
+        self.canonical_feed_url = self.canonical_url + 'atom.xml'
 
         # feed url
         # list style (index or all-expanded)
 
-    def load_entries(self, entries):
-        for entry in entries:
-            if entry.entry_id not in self.entries:
-                self.entries[entry.entry_id] = entry
+    def get_list_info(self):
+        ret = {}
+        ret['canonical_url'] = self.canonical_url
+        ret['canonical_feed_url'] = self.canonical_feed_url
+        return ret
 
-    def to_atom_xml(self):
-        pass
+    @classmethod
+    def from_predicate(cls, predicate, entries, site_info, tag=None):
+        target_entries = [e for e in entries if predicate(entries)]
+        return cls(target_entries, site_info=site_info, tag=tag)
 
 
 _docstart_re = re.compile(b'^---\r?\n')
