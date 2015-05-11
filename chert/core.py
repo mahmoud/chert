@@ -3,6 +3,7 @@
 import io
 import re
 import os
+import imp
 import time
 import string
 import hashlib
@@ -205,8 +206,31 @@ class Chert(object):
         self.audit()
         self.export()
 
+    def _load_custom_mod(self):
+        input_path = self.paths['input_path']
+        custom_mod_path = pjoin(input_path, 'custom.py')
+        if not os.path.exists(custom_mod_path):
+            self.custom_mod = None
+            return
+        site_name = os.path.split(input_path)[1]
+        self.custom_mod = imp.load_source(site_name + '.custom', custom_mod_path)
+
+    def _call_custom_hook(self, hook_name):
+        if not self.custom_mod:
+            return  # TODO: log
+        try:
+            hook_func = getattr(self.custom_mod, 'chert_' + hook_name)
+        except AttributeError:
+            return  # TODO log
+        try:
+            hook_func(self)
+        except:
+            pass  # TODO: log
+        return
+
     def load(self):
         self.last_load = time.time()
+        self._load_custom_mod()
         self.html_renderer = AshesEnv(paths=[self.theme_path])
         self.html_renderer.load_all()
 
@@ -229,6 +253,7 @@ class Chert(object):
                     self.entries.append(entry)
         self.entries.sort(key=lambda e: e.publish_date or datetime.now(),
                           reverse=True)
+        self._call_custom_hook('on_load')
 
     def validate(self):
         dup_id_map = {}
@@ -239,14 +264,17 @@ class Chert(object):
                 dup_id_map[eid] = elist
         if dup_id_map:
             raise ValueError('duplicate entry IDs detected: %r' % dup_id_map)
+        self._call_custom_hook('on_validate')
 
         # TODO: assert necessary templates are present (post.html, etc.)
 
     def preprocess(self):
+        # TODO: is this step necessary or should it be merged into load?
         for i, entry in enumerate(self.entries, start=1):
             start_next = max(0, i - NEXT_ENTRY_COUNT)
             entry.next_entries = self.entries[start_next:i - 1][::-1]
             entry.prev_entries = self.entries[i:i + PREV_ENTRY_COUNT]
+        self._call_custom_hook('on_preprocess')
 
     def render(self):
         entries = self.entries
@@ -267,6 +295,7 @@ class Chert(object):
                           'site': site_info}
             rendered_html = self.html_renderer.render(tmpl_name, render_ctx)
             entry.rendered_html = rendered_html
+            return
 
         for entry in entries:
             render_entry(entry, with_links=True)
@@ -281,6 +310,7 @@ class Chert(object):
                            'site': site_info}
         self.rendered_feed = self.atom_template.render(feed_render_ctx)
         # print rendered_feed
+        self._call_custom_hook('on_render')
 
     def audit(self):
         """
@@ -289,7 +319,7 @@ class Chert(object):
         # TODO: check for &nbsp; and other common HTML entities in
         # feed xml (these entities aren't supported in XML/Atom/RSS)
         # the only ok ones are here: https://en.wikipedia.org/wiki/List_of_XML_and_HTML_character_entity_references#Predefined_entities_in_XML
-        pass
+        self._call_custom_hook('on_audit')
 
     def export(self):
         output_path = self.paths['output_path']
@@ -332,6 +362,7 @@ class Chert(object):
             cur_dest_dir = pjoin(output_path, sdn)
             print 'copying from', cur_src_dir, 'to', cur_dest_dir
             copytree(cur_src_dir, cur_dest_dir)
+        self._call_custom_hook('on_export')
 
     def serve(self):
         host = DEV_SERVER_HOST
@@ -374,6 +405,8 @@ class Chert(object):
             thread.start()
             if not serving:
                 serving = True
+        # TODO: hook(s)
+        return
 
     def publish(self):  # deploy?
         prod_config = self.get_config('prod')
@@ -409,6 +442,7 @@ class Chert(object):
         else:
             print rsync_output
             print 'Publish succeeded.'
+        self._call_custom_hook('on_publish')
 
 
 def get_subdirectories(path):
