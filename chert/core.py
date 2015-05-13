@@ -168,8 +168,8 @@ class Chert(object):
     def get_site_info(self):
         ret = {}
         site_config = self.get_config('site')
-        ret['title'] = site_config.get('tagline', SITE_TITLE)
-        ret['head_title'] = site_config.get('tagline', ret['title'])
+        ret['title'] = site_config.get('title', SITE_TITLE)
+        ret['head_title'] = site_config.get('title', ret['title'])
         ret['tagline'] = site_config.get('tagline', '')
         ret['main_links'] = site_config.get('main_links', [])
         ret['alt_links'] = site_config.get('alt_links', [])
