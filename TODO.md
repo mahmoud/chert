@@ -29,8 +29,8 @@
   basis (some posts, e.g., myths of python) may have internal numbers
   and that would look strange)
 
-* special pages (e.g., about)
-
 * analytics code in config
 
 * superfeedr integration (pulled from PythonDoesBlog?)
+
+* Data pages (YAML files that get rendered to markdown at load time)
