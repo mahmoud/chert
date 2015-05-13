@@ -90,13 +90,126 @@ def canonicalize_links(text, base):
     return _link_re.sub(r'\g<attribute>="' + base + '/', text)
 
 
-class Chert(object):
-    def __init__(self, input_path, **kw):
-        self.entries = []
-        self.draft_entries = []
-        self.special_entries = []
+class Entry(object):
+    def __init__(self, title=None, content=None, **kwargs):
+        self.title = title
+        self.entry_id = None or slugify(title)
+        self.content = content or ''
+        self.input_path = kwargs.pop('input_path', None)
+        self.metadata = kwargs
 
-        self.entry_lists = kw.pop('entry_lists', [])
+        pub_date = self.metadata.get('publish_date')
+        self.publish_date = parse(pub_date) if pub_date else DEFAULT_DATE
+
+        self.edit_list = []
+        self.last_edit_date = None  # TODO
+
+        # TODO: needs to be set at process time, as prev/next links change
+        hash_content = (self.title + self.content).encode('utf-8')
+        self.entry_hash = hashlib.sha256(hash_content).hexdigest()
+
+        no_punct = _punct_re.sub('', self.content)
+        self.word_count = len(no_punct.split())
+        self.reading_time = self.word_count / READING_WPM
+
+    @property
+    def is_special(self):
+        return bool(self.metadata.get('special'))
+
+    @property
+    def is_draft(self):
+        return bool(self.metadata.get('draft'))
+
+    @property
+    def tags(self):
+        return self.metadata.get('tags', [])
+
+    @property
+    def layout(self):
+        return self.metadata.get('layout', DEFAULT_LAYOUT)
+
+    @classmethod
+    def from_dict(cls, in_dict):
+        ret = cls(**in_dict)
+        return ret
+
+    @classmethod
+    def from_path(cls, in_path):
+        entry_dict, text = read_yaml_text(in_path)
+        entry_dict['content'] = text
+        entry_dict['input_path'] = in_path
+        return cls.from_dict(entry_dict)
+
+    def __repr__(self):
+        cn = self.__class__.__name__
+        return ('<%s title=%r word_count=%r>'
+                % (cn, self.title, self.word_count))
+
+    def to_dict(self, with_links=False):
+        ret = dict(self.metadata,
+                   title=self.title,
+                   content=self.content,
+                   entry_id=self.entry_id)
+        try:
+            ret['rendered_content'] = self.rendered_content
+            ret['inline_rendered_content'] = self.inline_rendered_content
+        except AttributeError as ae:
+            print '---', ae, self.title
+
+        if with_links:
+            ret['prev_entries'] = [pe.to_dict() for pe in self.prev_entries]
+            ret['next_entries'] = [ne.to_dict() for ne in self.next_entries]
+
+        ret['publish_date_iso8601'] = format_date(self.publish_date)
+        if self.last_edit_date:
+            ret['update_date_iso8601'] = format_date(self.last_edit_date)
+        else:
+            ret['update_date_iso8601'] = None
+        ret['output_filename'] = ret['entry_id'] + EXPORT_HTML_EXT
+        return ret
+
+
+class EntryList(object):
+    # should end in a slash
+    tag_path_part = 'tagged/'
+
+    # Render HTML and atom feeds for a list of entries
+    def __init__(self, entries=None, tag=None):
+        self.entries = entries or []
+        self.tag = tag
+        # self.site_info = site_info
+        # self.canonical_url = site_info['canonical_url']
+        # if tag:
+        #    self.canonical_url += self.tag_path_part + tag + '/'
+        # self.canonical_feed_url = self.canonical_url + 'atom.xml'
+
+        # list style (index or all-expanded)
+
+    def get_list_info(self):
+        ret = {}
+        ret['canonical_url'] = self.canonical_url
+        ret['canonical_feed_url'] = self.canonical_feed_url
+        return ret
+
+    @classmethod
+    def from_predicate(cls, predicate, entries, site_info, tag=None):
+        target_entries = [e for e in entries if predicate(entries)]
+        return cls(target_entries, site_info=site_info, tag=tag)
+
+    def __iter__(self):
+        return iter(self.entries)
+
+
+class Chert(object):
+    _entry_type = Entry
+    _entry_list_type = EntryList
+
+    def __init__(self, input_path, **kw):
+        self.entries = self._entry_list_type()
+        self.draft_entries = self._entry_list_type()
+        self.special_entries = self._entry_list_type()
+
+        self.tag_map = OMD()
 
         # setting up paths
         self.paths = OMD()
@@ -109,6 +222,7 @@ class Chert(object):
         set_path('theme_path', kw.pop('theme_path', None), 'theme')
         set_path('output_path', kw.pop('output_path', None), 'site',
                  required=False)
+        # TODO: take optional kwarg
         self.config = yaml.load(open(self.paths['config_path']))
         self.last_load = None
         self._autoload = kw.pop('autoload', None)
@@ -123,6 +237,7 @@ class Chert(object):
         if not os.path.exists(atom_tmpl_path):
             atom_tmpl_path = default_atom_tmpl_path
 
+        # TODO: defer opening to loading?
         self.atom_template = Template('atom.xml', open(atom_tmpl_path).read())
 
     def _set_path(self, name, path, default_prefix=None, required=True):
@@ -250,6 +365,8 @@ class Chert(object):
                 self.special_entries.append(entry)
             else:
                 self.entries.append(entry)
+                for tag in entry.tags:
+                    pass
 
         self.entries.sort(key=lambda e: e.publish_date or datetime.now(),
                           reverse=True)
@@ -280,15 +397,15 @@ class Chert(object):
         mdr, imdr = self.md_renderer, self.inline_md_renderer
         site_info = self.get_site_info()
 
-        def render_entry(entry, with_links=False):
-            # first, render Markdown
+        def render_content(entry):
             entry.rendered_content = mdr.convert(entry.content)
             mdr.reset()
             entry.inline_rendered_content = canonicalize_links(imdr.convert(entry.content),
                                                                CANONICAL_DOMAIN)
             imdr.reset()
+            return
 
-            # then render HTML
+        def render_html(entry, with_links=False):
             tmpl_name = entry.layout + LAYOUT_EXT
             render_ctx = {'entry': entry.to_dict(with_links=with_links),
                           'site': site_info}
@@ -297,11 +414,18 @@ class Chert(object):
             return
 
         for entry in entries:
-            render_entry(entry, with_links=True)
+            render_content(entry)
         for entry in self.draft_entries:
-            render_entry(entry)
+            render_content(entry)
         for entry in self.special_entries:
-            render_entry(entry)
+            render_content(entry)
+
+        for entry in entries:
+            render_html(entry, with_links=True)
+        for entry in self.draft_entries:
+            render_html(entry)
+        for entry in self.special_entries:
+            render_html(entry)
 
         # render feed
         entry_ctxs = [e.to_dict(with_links=True) for e in entries]
@@ -489,110 +613,6 @@ Metadata ideas:
   - Source
   - Via
 """
-class Entry(object):
-    def __init__(self, title=None, content=None, **kwargs):
-        self.title = title
-        self.entry_id = None or slugify(title)
-        self.content = content or ''
-        self.input_path = kwargs.pop('input_path', None)
-        self.metadata = kwargs
-
-        pub_date = self.metadata.get('publish_date')
-        self.publish_date = parse(pub_date) if pub_date else DEFAULT_DATE
-
-        self.edit_list = []
-        self.last_edit_date = None  # TODO
-
-        # TODO: needs to be set at process time, as prev/next links change
-        hash_content = (self.title + self.content).encode('utf-8')
-        self.entry_hash = hashlib.sha256(hash_content).hexdigest()
-
-        no_punct = _punct_re.sub('', self.content)
-        self.word_count = len(no_punct.split())
-        self.reading_time = self.word_count / READING_WPM
-
-    @property
-    def is_special(self):
-        return bool(self.metadata.get('special'))
-
-    @property
-    def is_draft(self):
-        return bool(self.metadata.get('draft'))
-
-    @property
-    def layout(self):
-        return self.metadata.get('layout', DEFAULT_LAYOUT)
-
-    @classmethod
-    def from_dict(cls, in_dict):
-        ret = cls(**in_dict)
-        return ret
-
-    @classmethod
-    def from_path(cls, in_path):
-        entry_dict, text = read_yaml_text(in_path)
-        entry_dict['content'] = text
-        entry_dict['input_path'] = in_path
-        return cls.from_dict(entry_dict)
-
-    def __repr__(self):
-        cn = self.__class__.__name__
-        return ('<%s title=%r word_count=%r>'
-                % (cn, self.title, self.word_count))
-
-    def to_dict(self, with_links=False):
-        ret = dict(self.metadata,
-                   title=self.title,
-                   content=self.content,
-                   entry_id=self.entry_id)
-        try:
-            ret['rendered_content'] = self.rendered_content
-            ret['inline_rendered_content'] = self.inline_rendered_content
-        except AttributeError as ae:
-            print '---', ae, self.title
-
-        if with_links:
-            ret['prev_entries'] = [pe.to_dict() for pe in self.prev_entries]
-            ret['next_entries'] = [ne.to_dict() for ne in self.next_entries]
-
-        ret['publish_date_iso8601'] = format_date(self.publish_date)
-        if self.last_edit_date:
-            ret['update_date_iso8601'] = format_date(self.last_edit_date)
-        else:
-            ret['update_date_iso8601'] = None
-        ret['output_filename'] = ret['entry_id'] + EXPORT_HTML_EXT
-        return ret
-
-
-class EntryList(object):
-    # should end in a slash
-    tag_path_part = 'tagged/'
-
-    # Render HTML and atom feeds for a list of entries
-    def __init__(self, entries, site_info, tag=None):
-        self.entries = entries
-        self.site_info = site_info
-        self.tag = tag
-
-        self.canonical_url = site_info['canonical_url']
-        if tag:
-            self.canonical_url += self.tag_path_part + tag + '/'
-        self.canonical_feed_url = self.canonical_url + 'atom.xml'
-
-        # feed url
-        # list style (index or all-expanded)
-
-    def get_list_info(self):
-        ret = {}
-        ret['canonical_url'] = self.canonical_url
-        ret['canonical_feed_url'] = self.canonical_feed_url
-        return ret
-
-    @classmethod
-    def from_predicate(cls, predicate, entries, site_info, tag=None):
-        target_entries = [e for e in entries if predicate(entries)]
-        return cls(target_entries, site_info=site_info, tag=tag)
-
 
 _docstart_re = re.compile(b'^---\r?\n')
 
