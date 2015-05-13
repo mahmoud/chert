@@ -168,14 +168,14 @@ class Chert(object):
     def get_site_info(self):
         ret = {}
         site_config = self.get_config('site')
-        ret['title'] = SITE_TITLE
-        ret['head_title'] = SITE_HEAD_TITLE
+        ret['title'] = site_config.get('tagline', SITE_TITLE)
+        ret['head_title'] = site_config.get('tagline', ret['title'])
         ret['tagline'] = site_config.get('tagline', '')
         ret['main_links'] = site_config.get('main_links', [])
         ret['alt_links'] = site_config.get('alt_links', [])
         ret['lang_code'] = site_config.get('lang_code', 'en')
-        ret['copyright_notice'] = SITE_COPYRIGHT
-        ret['author_name'] = SITE_AUTHOR
+        ret['copyright_notice'] = site_config.get('copyright', SITE_COPYRIGHT)
+        ret['author_name'] = site_config.get('author', SITE_AUTHOR)
         ret['canonical_url'] = CANONICAL_URL
         ret['canonical_domain'] = CANONICAL_DOMAIN
         ret['canonical_base_path'] = CANONICAL_BASE_PATH
@@ -409,7 +409,7 @@ class Chert(object):
         return
 
     def publish(self):  # deploy?
-        #self._load_custom_mod
+        #self._load_custom_mod()
         #self._call_custom_hook('pre_publish')
         prod_config = self.get_config('prod')
         rsync_cmd = prod_config.get('rsync_cmd', 'rsync')
