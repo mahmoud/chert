@@ -226,7 +226,7 @@ class EntryList(object):
         return self.entries.sort(*a, **kw)
 
 
-class Chert(object):
+class Site(object):
     _entry_type = Entry
     _entry_list_type = EntryList
 
@@ -696,14 +696,14 @@ def main():
     kwargs = dict(prs.parse_args()._get_kwargs())
     action = kwargs['action']
     if action == 'serve':
-        ch = Chert(os.getcwd())
+        ch = Site(os.getcwd())
         ch.serve()
     elif action == 'publish':
-        ch = Chert(os.getcwd())
+        ch = Site(os.getcwd())
         ch.process()
         ch.publish()
     elif action == 'render':
-        ch = Chert(os.getcwd())
+        ch = Site(os.getcwd())
         ch.process()
     elif action == 'init':
         target_dir = abspath(kwargs['target_dir'])
