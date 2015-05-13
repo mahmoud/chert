@@ -150,11 +150,8 @@ class Entry(object):
                    title=self.title,
                    content=self.content,
                    entry_id=self.entry_id)
-        try:
-            ret['rendered_content'] = self.rendered_content
-            ret['inline_rendered_content'] = self.inline_rendered_content
-        except AttributeError as ae:
-            print '---', ae, self.title
+        ret['rendered_content'] = self.rendered_content
+        ret['inline_rendered_content'] = self.inline_rendered_content
 
         if with_links:
             ret['prev_entries'] = [pe.to_dict() for pe in self.prev_entries]
@@ -177,27 +174,56 @@ class EntryList(object):
     def __init__(self, entries=None, tag=None):
         self.entries = entries or []
         self.tag = tag
-        # self.site_info = site_info
-        # self.canonical_url = site_info['canonical_url']
-        # if tag:
-        #    self.canonical_url += self.tag_path_part + tag + '/'
-        # self.canonical_feed_url = self.canonical_url + 'atom.xml'
+        self.path_part = ''
+        if self.tag:
+            self.path_part = self.tag_path_part + self.tag + '/'
 
         # list style (index or all-expanded)
 
-    def get_list_info(self):
+    def get_list_info(self, site_info):
         ret = {}
-        ret['canonical_url'] = self.canonical_url
-        ret['canonical_feed_url'] = self.canonical_feed_url
+        canonical_url = site_info['canonical_url']
+        if self.tag:
+            canonical_url += self.tag_path_part + self.tag + '/'
+        canonical_feed_url = canonical_url + 'atom.xml'
+
+        ret['canonical_url'] = canonical_url
+        ret['canonical_feed_url'] = canonical_feed_url
         return ret
+
+    def render(self, site_obj):
+        # TODO: with a more complex API this could be made stateless
+        # and return the feed, making the site object track rendered
+        # feeds
+        site_info = site_obj.get_site_info()
+        list_info = self.get_list_info(site_info)
+        entry_ctxs = [e.to_dict(with_links=True) for e in self.entries]
+        feed_render_ctx = {'entries': entry_ctxs,
+                           'site': site_info,
+                           'list': list_info}
+        print list_info
+        self.rendered_feed = site_obj.atom_template.render(feed_render_ctx)
+        # TODO: render archive html
 
     @classmethod
     def from_predicate(cls, predicate, entries, site_info, tag=None):
         target_entries = [e for e in entries if predicate(entries)]
         return cls(target_entries, site_info=site_info, tag=tag)
 
+    def append(self, entry):
+        return self.entries.append(entry)
+
+    def clear(self):
+        del self.entries[:]
+
     def __iter__(self):
         return iter(self.entries)
+
+    def __getitem__(self, idx):
+        return self.entries.__getitem__(idx)
+
+    def sort(self, *a, **kw):
+        return self.entries.sort(*a, **kw)
 
 
 class Chert(object):
@@ -208,8 +234,7 @@ class Chert(object):
         self.entries = self._entry_list_type()
         self.draft_entries = self._entry_list_type()
         self.special_entries = self._entry_list_type()
-
-        self.tag_map = OMD()
+        self.tag_map = {}
 
         # setting up paths
         self.paths = OMD()
@@ -352,7 +377,7 @@ class Chert(object):
         entry_paths = []
         for entry_path in iter_find_files(entries_path, ENTRY_PAT):
             entry_paths.append(entry_path)
-        self.entries = []
+        self.entries.clear()
         for ep in entry_paths:
             try:
                 entry = Entry.from_path(ep)
@@ -366,7 +391,10 @@ class Chert(object):
             else:
                 self.entries.append(entry)
                 for tag in entry.tags:
-                    pass
+                    try:
+                        self.tag_map[tag].append(entry)
+                    except KeyError:
+                        self.tag_map[tag] = EntryList([entry], tag=tag)
 
         self.entries.sort(key=lambda e: e.publish_date or datetime.now(),
                           reverse=True)
@@ -427,11 +455,11 @@ class Chert(object):
         for entry in self.special_entries:
             render_html(entry)
 
-        # render feed
-        entry_ctxs = [e.to_dict(with_links=True) for e in entries]
-        feed_render_ctx = {'entries': entry_ctxs,
-                           'site': site_info}
-        self.rendered_feed = self.atom_template.render(feed_render_ctx)
+        # render feeds
+        self.entries.render(site_obj=self)
+        for tag, entry_list in self.tag_map.items():
+            entry_list.render(site_obj=self)
+
         self._call_custom_hook('post_render')
 
     def audit(self):
@@ -475,10 +503,16 @@ class Chert(object):
             print 'writing to', index_path
             f.write(index_content.encode('utf-8'))
 
-        # atom feed
+        # atom feeds
         atom_path = pjoin(output_path, 'atom.xml')
         with open(atom_path, 'w') as f:
-            f.write(self.rendered_feed.encode('utf-8'))
+            f.write(self.entries.rendered_feed.encode('utf-8'))
+        for tag, entry_list in self.tag_map.items():
+            tag_path = pjoin(output_path, entry_list.path_part)
+            mkdir_p(tag_path)
+            atom_path = pjoin(tag_path, 'atom.xml')
+            with open(atom_path, 'w') as f:
+                f.write(entry_list.rendered_feed.encode('utf-8'))
 
         # copy all directories under the theme path
         for sdn in get_subdirectories(self.theme_path):
