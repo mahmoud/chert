@@ -186,7 +186,7 @@ class EntryList(object):
         if self.tag:
             canonical_url += self.tag_path_part + self.tag + '/'
         canonical_feed_url = canonical_url + 'atom.xml'
-
+        ret['tag'] = self.tag or ''
         ret['canonical_url'] = canonical_url
         ret['canonical_feed_url'] = canonical_feed_url
         return ret
