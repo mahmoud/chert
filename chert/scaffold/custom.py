@@ -4,5 +4,5 @@
 print ' - custom module loaded.'
 
 
-def chert_on_load(chert_obj):
-    print ' - on_load hook: %s entries loaded' % len(chert_obj.entries)
+def chert_post_load(chert_obj):
+    print ' - post_load hook: %s entries loaded' % len(chert_obj.entries)

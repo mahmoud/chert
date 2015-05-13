@@ -229,6 +229,7 @@ class Chert(object):
     def load(self):
         self.last_load = time.time()
         self._load_custom_mod()
+        self._call_custom_hook('pre_load')
         self.html_renderer = AshesEnv(paths=[self.theme_path])
         self.html_renderer.load_all()
 
@@ -242,13 +243,13 @@ class Chert(object):
                 entry = Entry.from_path(ep)
             except IOError as ioe:
                 print 'warning: skipping unopenable entry: %r' % ep
+                continue
+            if entry.is_draft:
+                self.draft_entries.append(entry)
+            elif entry.is_special:
+                self.special_entries.append(entry)
             else:
-                if entry.is_draft:
-                    self.draft_entries.append(entry)
-                elif entry.is_special:
-                    self.special_entries.append(entry)
-                else:
-                    self.entries.append(entry)
+                self.entries.append(entry)
 
         self.entries.sort(key=lambda e: e.publish_date or datetime.now(),
                           reverse=True)
@@ -257,9 +258,10 @@ class Chert(object):
             entry.next_entries = self.entries[start_next:i - 1][::-1]
             entry.prev_entries = self.entries[i:i + PREV_ENTRY_COUNT]
 
-        self._call_custom_hook('on_load')
+        self._call_custom_hook('post_load')
 
     def validate(self):
+        self._call_custom_hook('pre_validate')
         dup_id_map = {}
         eid_map = OMD([(e.entry_id, e) for e in self.entries])
         for eid in eid_map:
@@ -268,11 +270,12 @@ class Chert(object):
                 dup_id_map[eid] = elist
         if dup_id_map:
             raise ValueError('duplicate entry IDs detected: %r' % dup_id_map)
-        self._call_custom_hook('on_validate')
+        self._call_custom_hook('post_validate')
 
         # TODO: assert necessary templates are present (post.html, etc.)
 
     def render(self):
+        self._call_custom_hook('pre_render')
         entries = self.entries
         mdr, imdr = self.md_renderer, self.inline_md_renderer
         site_info = self.get_site_info()
@@ -305,8 +308,7 @@ class Chert(object):
         feed_render_ctx = {'entries': entry_ctxs,
                            'site': site_info}
         self.rendered_feed = self.atom_template.render(feed_render_ctx)
-        # print rendered_feed
-        self._call_custom_hook('on_render')
+        self._call_custom_hook('post_render')
 
     def audit(self):
         """
@@ -315,9 +317,11 @@ class Chert(object):
         # TODO: check for &nbsp; and other common HTML entities in
         # feed xml (these entities aren't supported in XML/Atom/RSS)
         # the only ok ones are here: https://en.wikipedia.org/wiki/List_of_XML_and_HTML_character_entity_references#Predefined_entities_in_XML
-        self._call_custom_hook('on_audit')
+        self._call_custom_hook('pre_audit')
+        self._call_custom_hook('post_audit')
 
     def export(self):
+        self._call_custom_hook('pre_export')
         output_path = self.paths['output_path']
 
         mkdir_p(output_path)
@@ -358,7 +362,7 @@ class Chert(object):
             cur_dest_dir = pjoin(output_path, sdn)
             print 'copying from', cur_src_dir, 'to', cur_dest_dir
             copytree(cur_src_dir, cur_dest_dir)
-        self._call_custom_hook('on_export')
+        self._call_custom_hook('post_export')
 
     def serve(self):
         host = DEV_SERVER_HOST
@@ -401,10 +405,12 @@ class Chert(object):
             thread.start()
             if not serving:
                 serving = True
-        # TODO: hook(s)
+        # TODO: hook(s)?
         return
 
     def publish(self):  # deploy?
+        #self._load_custom_mod
+        #self._call_custom_hook('pre_publish')
         prod_config = self.get_config('prod')
         rsync_cmd = prod_config.get('rsync_cmd', 'rsync')
         if not rsync_cmd.isalpha():
@@ -438,7 +444,7 @@ class Chert(object):
         else:
             print rsync_output
             print 'Publish succeeded.'
-        self._call_custom_hook('on_publish')
+        #self._call_custom_hook('post_publish')
 
 
 def get_subdirectories(path):
