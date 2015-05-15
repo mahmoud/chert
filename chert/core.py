@@ -208,11 +208,6 @@ class EntryList(object):
         self.rendered_html = site_obj.html_renderer.render(tag_archive_layout,
                                                            feed_render_ctx)
 
-    @classmethod
-    def from_predicate(cls, predicate, entries, site_info, tag=None):
-        target_entries = [e for e in entries if predicate(entries)]
-        return cls(target_entries, site_info=site_info, tag=tag)
-
     def append(self, entry):
         return self.entries.append(entry)
 

@@ -36,3 +36,5 @@
 * Data pages (YAML files that get rendered to markdown at load time)
 
 * https canonical urls (should feed ID, etc. be scheme-less?)
+
+* sort tagged entry lists (Should EntryLists always be sorted?)
