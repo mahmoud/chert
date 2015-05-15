@@ -16,6 +16,8 @@ from SimpleHTTPServer import SimpleHTTPRequestHandler
 from BaseHTTPServer import HTTPServer
 from threading import Thread
 from pipes import quote as shell_quote
+from HTMLParser import HTMLParser
+import htmlentitydefs
 
 import yaml
 from markdown import Markdown
@@ -112,6 +114,8 @@ class Entry(object):
         self.word_count = len(no_punct.split())
         self.reading_time = self.word_count / READING_WPM
 
+        self.summary = self.metadata.get('summary')
+
     @property
     def is_special(self):
         return bool(self.metadata.get('special'))
@@ -152,7 +156,7 @@ class Entry(object):
                    entry_id=self.entry_id)
         ret['rendered_content'] = self.rendered_content
         ret['inline_rendered_content'] = self.inline_rendered_content
-
+        ret['summary'] = self.summary
         if with_links:
             ret['prev_entries'] = [pe.to_dict() for pe in self.prev_entries]
             ret['next_entries'] = [ne.to_dict() for ne in self.next_entries]
@@ -435,6 +439,11 @@ class Site(object):
             entry.inline_rendered_content = canonicalize_links(imdr.convert(entry.content),
                                                                CANONICAL_DOMAIN)
             imdr.reset()
+
+            # TODO:
+            if not entry.summary:
+                rendered_text = html2text(entry.rendered_content)
+                entry.summary = ' '.join(rendered_text.split()[:28]) + '...'
             return
 
         def render_html(entry, with_links=False):
@@ -722,6 +731,50 @@ def main():
         print 'Created Chert instance in directory: %s' % target_dir
     else:
         raise ValueError('unknown action: %s' % action)
+
+
+class HTMLTextExtractor(HTMLParser):
+    def __init__(self):
+        self.reset()
+        self.strict = False
+        self.convert_charrefs = True
+        self.result = []
+
+    def handle_data(self, d):
+        self.result.append(d)
+
+    def handle_charref(self, number):
+        if number[0] == u'x' or number[0] == u'X':
+            codepoint = int(number[1:], 16)
+        else:
+            codepoint = int(number)
+        self.result.append(unichr(codepoint))
+
+    def handle_entityref(self, name):
+        try:
+            codepoint = htmlentitydefs.name2codepoint[name]
+        except KeyError:
+            self.result.append(u'&' + name + u';')
+        else:
+            self.result.append(unichr(codepoint))
+
+    def get_text(self):
+        return u''.join(self.result)
+
+
+def html2text(html):
+    """Strips tags from HTML text, returning markup-free text. Also, does
+    a best effort replacement of entities like "&nbsp;"
+
+    >>> r = html2text(u'<a href="#">Test &amp;<em>(\u0394&#x03b7;&#956;&#x03CE;)</em></a>')
+    >>> r == u'Test &(\u0394\u03b7\u03bc\u03ce)'
+    True
+    """
+    # based on answers to http://stackoverflow.com/questions/753052/
+    s = HTMLTextExtractor()
+    s.feed(html)
+    return s.get_text()
+
 
 if __name__ == '__main__':
     main()
