@@ -38,3 +38,6 @@
 * https canonical urls (should feed ID, etc. be scheme-less?)
 
 * sort tagged entry lists (Should EntryLists always be sorted?)
+
+* make loads idempotent instead of explicit reset (was getting
+  duplicates in EntryLists on server reload)

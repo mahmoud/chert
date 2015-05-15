@@ -229,11 +229,6 @@ class Site(object):
     _entry_list_type = EntryList
 
     def __init__(self, input_path, **kw):
-        self.entries = self._entry_list_type()
-        self.draft_entries = self._entry_list_type()
-        self.special_entries = self._entry_list_type()
-        self.tag_map = {}
-
         # setting up paths
         self.paths = OMD()
         self._paths = OMD()  # for the raw input paths
@@ -245,12 +240,20 @@ class Site(object):
         set_path('theme_path', kw.pop('theme_path', None), 'theme')
         set_path('output_path', kw.pop('output_path', None), 'site',
                  required=False)
+        self.reset()
+
+    def reset(self):
+        """Called on __init__ and on reload before processing. Does not reset
+        paths, etc., just state mutated during processing"""
+        self.entries = self._entry_list_type()
+        self.draft_entries = self._entry_list_type()
+        self.special_entries = self._entry_list_type()
+        self.tag_map = {}
+
         # TODO: take optional kwarg
         self.config = yaml.load(open(self.paths['config_path']))
+
         self.last_load = None
-        self._autoload = kw.pop('autoload', None)
-        if self._autoload:
-            self.load()
 
         self.md_renderer = Markdown(extensions=MD_EXTENSIONS)
         self.inline_md_renderer = Markdown(extensions=INLINE_MD_EXTENSIONS)
@@ -338,6 +341,8 @@ class Site(object):
         return self.paths['output_path']
 
     def process(self):
+        if self.last_load:
+            self.reset()
         self.load()
         self.validate()
         self.render()
@@ -377,7 +382,6 @@ class Site(object):
         entry_paths = []
         for entry_path in iter_find_files(entries_path, ENTRY_PAT):
             entry_paths.append(entry_path)
-        self.entries.clear()
         for ep in entry_paths:
             try:
                 entry = Entry.from_path(ep)
