@@ -57,7 +57,7 @@ MD_EXTENSIONS = BASE_MD_EXTENSIONS + [_HILITE, _TOC_EXTENSION]
 _HILITE_INLINE = CodeHiliteExtension(noclasses=True,
                                      pygments_style='emacs')
 INLINE_MD_EXTENSIONS = BASE_MD_EXTENSIONS + [_HILITE_INLINE]
-
+# TODO: is leftover [TOC] in feed such a bad thing?
 
 ENTRY_ENCODING = 'utf-8'
 ENTRY_PAT = '*.md'
@@ -201,9 +201,12 @@ class EntryList(object):
         feed_render_ctx = {'entries': entry_ctxs,
                            'site': site_info,
                            'list': list_info}
-        print list_info
         self.rendered_feed = site_obj.atom_template.render(feed_render_ctx)
-        # TODO: render archive html
+
+        tag_archive_layout = site_obj.get_config('site', 'tag_archive_layout', 'brief')
+        tag_archive_layout = 'archive_' + tag_archive_layout + LAYOUT_EXT
+        self.rendered_html = site_obj.html_renderer.render(tag_archive_layout,
+                                                           feed_render_ctx)
 
     @classmethod
     def from_predicate(cls, predicate, entries, site_info, tag=None):
@@ -256,14 +259,7 @@ class Site(object):
 
         self.md_renderer = Markdown(extensions=MD_EXTENSIONS)
         self.inline_md_renderer = Markdown(extensions=INLINE_MD_EXTENSIONS)
-
-        default_atom_tmpl_path = pjoin(CUR_PATH, 'atom.xml')
-        atom_tmpl_path = pjoin(self.theme_path, 'atom.xml')
-        if not os.path.exists(atom_tmpl_path):
-            atom_tmpl_path = default_atom_tmpl_path
-
-        # TODO: defer opening to loading?
-        self.atom_template = Template('atom.xml', open(atom_tmpl_path).read())
+        self._load_atom_template()
 
     def _set_path(self, name, path, default_prefix=None, required=True):
         """Set a path.
@@ -288,6 +284,15 @@ class Site(object):
                 raise RuntimeError('expected existent %s path, not %r'
                                    % (name, self.paths[name]))
         return
+
+    def _load_atom_template(self):
+        default_atom_tmpl_path = pjoin(CUR_PATH, 'atom.xml')
+        atom_tmpl_path = pjoin(self.theme_path, 'atom.xml')
+        if not os.path.exists(atom_tmpl_path):
+            atom_tmpl_path = default_atom_tmpl_path
+
+        # TODO: defer opening to loading?
+        self.atom_template = Template('atom.xml', open(atom_tmpl_path).read())
 
     def get_config(self, section, key=None, default=_UNSET):
         try:
@@ -511,8 +516,11 @@ class Site(object):
             tag_path = pjoin(output_path, entry_list.path_part)
             mkdir_p(tag_path)
             atom_path = pjoin(tag_path, 'atom.xml')
+            archive_path = pjoin(tag_path, 'index.html')
             with open(atom_path, 'w') as f:
                 f.write(entry_list.rendered_feed.encode('utf-8'))
+            with open(archive_path, 'w') as f:
+                f.write(entry_list.rendered_html.encode('utf-8'))
 
         # copy all directories under the theme path
         for sdn in get_subdirectories(self.theme_path):

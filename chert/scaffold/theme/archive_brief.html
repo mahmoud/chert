@@ -1,0 +1,17 @@
+{>base.html/}
+
+{<head_title}{site.head_title}{?list.tag} - "{list.tag}" entries{/list.tag}{/head_title}
+
+{<content}
+{#entries}
+<div class="row">
+  <div class="twelve columns">
+    <div class="two columns"><h3><a href="/{.entry_id}{site.export_html_ext}">{.title}</h3></a></div>
+  </div>
+</div>
+{:else}
+<p>No entries here yet.</p>
+{/entries}
+
+
+{/content}
