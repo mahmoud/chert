@@ -20,11 +20,12 @@
 
 @media (min-width: 750px) {
     #header {
-        margin-bottom: 0;
+        margin-bottom: 1.5rem;
     }
 }
 
 #header h1 {
+    font-size: 3rem;
     margin-top: 5px;
     margin-bottom: 5px;
 }
@@ -94,11 +95,16 @@ div.footnote li p {
     margin-bottom: 0;
 }
 
-div.footnote hr {
+
+hr {
     /* border: none; */
-    border-top: 2px solid #CCC;
     margin: 10px 0;
     text-align: center;
+}
+
+div.footnote hr {
+    border-top: 2px solid #E1E1E1;
+    color: #BBB;
 }
 
 div.footnote hr:after {
