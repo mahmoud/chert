@@ -69,9 +69,9 @@ dd:before {
 
 pre {
     /* display: inline-block; */
-    border-top: solid 1px #CCC;
-    border-bottom: solid 1px #CCC;
-    padding: 1.3rem;
+    border-left: solid 5px #E1E1E1;
+    /*border-bottom: solid 1px #CCC;*/
+    padding: 0.3rem 0 0.3rem 1.3rem;
     font-size: 1.3rem;
 }
 
@@ -180,9 +180,11 @@ div.toc li {
 }
 
 div.toc {
-    border: 1px solid #CCC;
+    /*border: 1px solid #CCC;*/
+    /*padding: 0.5rem 0.7rem 0 0.7rem;*/
+    border-left: 5px solid #E1E1E1;
+    padding: 0.3rem 0 0 1rem;
     display: inline-block;
-    padding: 0.5rem 0.7rem 0 0.7rem;
     margin-bottom: 1rem;
 }
 
