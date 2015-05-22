@@ -26,11 +26,11 @@ from boltons.strutils import slugify
 from boltons.dictutils import OrderedMultiDict as OMD
 from boltons.fileutils import mkdir_p, copytree, iter_find_files
 from boltons.debugutils import pdb_on_signal
+from lithoxyl import Logger, SensibleSink, Formatter, StreamEmitter
 from ashes import AshesEnv, Template
 from dateutil.parser import parse
 from markdown.extensions.toc import TocExtension
 from markdown.extensions.codehilite import CodeHiliteExtension
-
 
 DEBUG = False
 if DEBUG:
@@ -82,6 +82,14 @@ CANONICAL_URL = CANONICAL_DOMAIN + CANONICAL_BASE_PATH
 
 DEFAULT_LAYOUT = 'entry'
 _UNSET = object()
+
+
+chert_log = Logger('chert')  # TODO: separate load/render logs?
+stderr_fmt = Formatter('{end_local_iso8601_notz} - {record_name} - {message} ({extras})')
+stderr_emt = StreamEmitter('stderr')
+stderr_sink = SensibleSink(formatter=stderr_fmt,
+                           emitter=stderr_emt)
+chert_log.add_sink(stderr_sink)
 
 
 _link_re = re.compile("((?P<attribute>src|href)=\"/)")
@@ -245,6 +253,7 @@ class Site(object):
         set_path('output_path', kw.pop('output_path', None), 'site',
                  required=False)
         self.reset()
+        chert_log.debug('init site').success()
 
     def reset(self):
         """Called on __init__ and on reload before processing. Does not reset
@@ -274,18 +283,19 @@ class Site(object):
                 be set.
             required: raise an error if path does not exist
         """
-        self._paths[name] = path
-        if path:
-            self.paths[name] = abspath(path)
-        elif default_prefix:
-            self.paths[name] = pjoin(self.input_path, default_prefix)
-        else:
-            raise ValueError('no path or default prefix set for %r' % name)
-        if required:
-            if not os.path.exists(self.paths[name]):
-                raise RuntimeError('expected existent %s path, not %r'
-                                   % (name, self.paths[name]))
-        return
+        with chert_log.debug('set path', path_name=name, path_val=path):
+            self._paths[name] = path
+            if path:
+                self.paths[name] = abspath(path)
+            elif default_prefix:
+                self.paths[name] = pjoin(self.input_path, default_prefix)
+            else:
+                raise ValueError('no path or default prefix set for %r' % name)
+            if required:
+                if not os.path.exists(self.paths[name]):
+                    raise RuntimeError('expected existent %s path, not %r'
+                                       % (name, self.paths[name]))
+            return
 
     def _load_atom_template(self):
         default_atom_tmpl_path = pjoin(CUR_PATH, 'atom.xml')
