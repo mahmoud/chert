@@ -85,7 +85,7 @@ _UNSET = object()
 
 
 chert_log = Logger('chert')  # TODO: separate load/render logs?
-stderr_fmt = Formatter('{end_local_iso8601_notz} - {record_name} - {message} ({extras})')
+stderr_fmt = Formatter('{end_local_iso8601_noms_notz} - {message} ({extras})')
 stderr_emt = StreamEmitter('stderr')
 stderr_sink = SensibleSink(formatter=stderr_fmt,
                            emitter=stderr_emt)
@@ -98,6 +98,21 @@ _link_re = re.compile("((?P<attribute>src|href)=\"/)")
 def canonicalize_links(text, base):
     # turns links into canonical links for RSS
     return _link_re.sub(r'\g<attribute>="' + base + '/', text)
+
+
+def rec_dec(record, inject_as=None):
+    def func_wrapper(func):
+        def wrapped_func(*a, **kw):
+            # reraise + extras. message/raw_message/etc?
+            logger = record.logger
+            rec_func = getattr(logger, record.level.name)
+            new_record = rec_func(record.name)
+            if inject_as:
+                kw[inject_as] = new_record
+            with new_record:
+                return func(*a, **kw)
+        return wrapped_func
+    return func_wrapper
 
 
 class Entry(object):
@@ -370,19 +385,23 @@ class Site(object):
             self.custom_mod = None
             return
         site_name = os.path.split(input_path)[1]
-        self.custom_mod = imp.load_source(site_name + '.custom', custom_mod_path)
+        with chert_log.debug('import site custom module'):
+            mod_name = site_name + '.custom'
+            self.custom_mod = imp.load_source(mod_name, custom_mod_path)
 
     def _call_custom_hook(self, hook_name):
-        if not self.custom_mod:
-            return  # TODO: log
-        try:
-            hook_func = getattr(self.custom_mod, 'chert_' + hook_name)
-        except AttributeError:
-            return  # TODO log
-        try:
+        rec = chert_log.debug('call custom %s hook' % hook_name,
+                              reraise=False)
+        with rec:
+            if not self.custom_mod:
+                # TODO: success or failure?
+                rec.failure('no custom module loaded')
+            try:
+                hook_func = getattr(self.custom_mod, 'chert_' + hook_name)
+            except AttributeError:
+                rec.failure('no {} hook defined', hook_name)
+                return
             hook_func(self)
-        except:
-            pass  # TODO: log
         return
 
     def load(self):
