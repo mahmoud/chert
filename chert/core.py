@@ -241,6 +241,9 @@ class EntryList(object):
     def clear(self):
         del self.entries[:]
 
+    def __len__(self):
+        return len(self.entries)
+
     def __iter__(self):
         return iter(self.entries)
 
@@ -390,9 +393,8 @@ class Site(object):
             self.custom_mod = imp.load_source(mod_name, custom_mod_path)
 
     def _call_custom_hook(self, hook_name):
-        rec = chert_log.debug('call custom %s hook' % hook_name,
-                              reraise=False)
-        with rec:
+        with chert_log.debug('call custom %s hook' % hook_name,
+                             reraise=False) as rec:
             if not self.custom_mod:
                 # TODO: success or failure?
                 rec.failure('no custom module loaded')
@@ -416,11 +418,12 @@ class Site(object):
         for entry_path in iter_find_files(entries_path, ENTRY_PAT):
             entry_paths.append(entry_path)
         for ep in entry_paths:
-            try:
-                entry = Entry.from_path(ep)
-            except IOError as ioe:
-                print 'warning: skipping unopenable entry: %r' % ep
-                continue
+            with chert_log.info('entry load') as rec:
+                try:
+                    entry = Entry.from_path(ep)
+                except IOError:
+                    rec.exception('unopenable entry path: {}', ep)
+                    continue
             if entry.is_draft:
                 self.draft_entries.append(entry)
             elif entry.is_special:
