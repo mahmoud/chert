@@ -584,6 +584,9 @@ class Site(object):
             index_content = 'No entries yet!'
         with logged_open(index_path, 'w') as f:
             f.write(index_content.encode('utf-8'))
+        archive_path = pjoin(output_path, ('archive' + EXPORT_HTML_EXT))
+        with logged_open(archive_path, 'w') as f:
+            f.write(self.entries.rendered_html.encode('utf-8'))
 
         # atom feeds
         atom_path = pjoin(output_path, 'atom.xml')
