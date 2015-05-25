@@ -86,7 +86,8 @@ _UNSET = object()
 
 
 chert_log = Logger('chert')  # TODO: separate load/render logs?
-stderr_fmt = Formatter('{end_local_iso8601_noms_notz} - {message}')
+# TODO: duration_s, duration_ms, duration_us
+stderr_fmt = Formatter('{end_local_iso8601_noms_notz} - {duration_msecs}ms - {message}')
 stderr_emt = StreamEmitter('stderr')
 stderr_sink = SensibleSink(formatter=stderr_fmt,
                            emitter=stderr_emt)
@@ -433,6 +434,7 @@ class Site(object):
             hook_func(self)
         return
 
+    @rec_dec(chert_log.critical('load site'))
     def load(self):
         self.last_load = time.time()
         self._load_custom_mod()
@@ -472,6 +474,7 @@ class Site(object):
 
         self._call_custom_hook('post_load')
 
+    @rec_dec(chert_log.critical('validate site'))
     def validate(self):
         self._call_custom_hook('pre_validate')
         dup_id_map = {}
@@ -486,6 +489,7 @@ class Site(object):
 
         # TODO: assert necessary templates are present (post.html, etc.)
 
+    @rec_dec(chert_log.critical('render site'))
     def render(self):
         self._call_custom_hook('pre_render')
         entries = self.entries
@@ -534,6 +538,7 @@ class Site(object):
 
         self._call_custom_hook('post_render')
 
+    @rec_dec(chert_log.critical('audit site'))
     def audit(self):
         """
         Validation of rendered content, to be used for link checking.
@@ -544,6 +549,7 @@ class Site(object):
         self._call_custom_hook('pre_audit')
         self._call_custom_hook('post_audit')
 
+    @rec_dec(chert_log.critical('export site'))
     def export(self):
         self._call_custom_hook('pre_export')
         output_path = self.paths['output_path']
@@ -640,6 +646,7 @@ class Site(object):
         # TODO: hook(s)?
         return
 
+    @rec_dec(chert_log.critical('publish site'))
     def publish(self):  # deploy?
         #self._load_custom_mod()
         #self._call_custom_hook('pre_publish')
