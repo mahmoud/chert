@@ -66,6 +66,7 @@ ENTRY_PAT = '*.md'
 LAYOUT_EXT = '.html'
 LAYOUT_PAT = '*' + LAYOUT_EXT
 
+EXPORT_SRC_EXT = '.md'
 EXPORT_HTML_EXT = '.html'  # some people might prefer .htm
 
 DEV_SERVER_HOST = '0.0.0.0'
@@ -120,6 +121,7 @@ class Entry(object):
         self.title = title
         self.entry_id = None or slugify(title)
         self.content = content or ''
+        self.source_text = kwargs.pop('source_text', None)
         self.input_path = kwargs.pop('input_path', None)
         self.metadata = kwargs
 
@@ -163,6 +165,7 @@ class Entry(object):
     @classmethod
     def from_path(cls, in_path):
         entry_dict, text = read_yaml_text(in_path)
+        entry_dict['source_text'] = open(in_path).read()
         entry_dict['content'] = text
         entry_dict['input_path'] = in_path
         return cls.from_dict(entry_dict)
@@ -524,12 +527,18 @@ class Site(object):
         mkdir_p(output_path)
 
         def export_entry(entry):
-            entry_fn = entry.entry_id + EXPORT_HTML_EXT
-            cur_output_path = pjoin(output_path, entry_fn)
+            entry_src_fn = entry.entry_id + EXPORT_SRC_EXT
+            entry_html_fn = entry.entry_id + EXPORT_HTML_EXT
+            src_output_path = pjoin(output_path, entry_src_fn)
+            html_output_path = pjoin(output_path, entry_html_fn)
 
-            with open(cur_output_path, 'w') as f:
-                print 'writing to', cur_output_path
+            with open(html_output_path, 'w') as f:
+                print 'writing to', html_output_path
                 f.write(entry.rendered_html.encode('utf-8'))
+            with open(src_output_path, 'w') as f:
+                print 'writing to', src_output_path
+                f.write(entry.source_text.encode('utf-8'))
+
 
         for entry in self.entries:
             export_entry(entry)
