@@ -105,7 +105,8 @@ def canonicalize_links(text, base):
 def rec_dec(record, inject_as=None):
     def func_wrapper(func):
         def wrapped_func(*a, **kw):
-            # reraise + extras. message/raw_message/etc?
+            # kwargs: reraise + extras. message/raw_message/etc?
+            # rewrite Callpoint of record to be the actual wrapped function?
             logger = record.logger
             rec_func = getattr(logger, record.level.name)
             new_record = rec_func(record.name)
@@ -124,13 +125,13 @@ def logged_open(path, mode='rb'):
 
     open_type = mode[0]
     if open_type == 'r':
-        msg = 'opening {path} for reading'
+        msg = 'open {path} for read'
     elif open_type == 'w':
-        msg = 'opening {path} for writing'
+        msg = 'open {path} for write'
     elif open_type == 'a':
-        msg = 'opening {path} for appending'
+        msg = 'open {path} for append'
     else:
-        msg = 'opening {path}'
+        msg = 'open {path}'
     with chert_log.critical(msg, path=path):
         return open(path, mode)
 
@@ -304,7 +305,7 @@ class Site(object):
         self.tag_map = {}
 
         # TODO: take optional kwarg
-        self.config = yaml.load(open(self.paths['config_path']))
+        self.config = yaml.load(logged_open(self.paths['config_path']))
 
         self.last_load = None
 
