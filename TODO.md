@@ -13,17 +13,9 @@
   field is defined, then the next document, if present, is a separate
   post.
 
-* Archive view
-
 * Finish support for non-root-path-based installations
 
-* Instrument with Lithoxyl
-
-* Also upload source code/gen source code links
-
 * --clean option (effectively removes any unused files from site/)
-
-* tag pages
 
 * Make ToC style (numbered or bullets) configurable on a per-post
   basis (some posts, e.g., myths of python) may have internal numbers
