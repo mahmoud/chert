@@ -82,6 +82,8 @@ if not CANONICAL_BASE_PATH.endswith('/'):
 CANONICAL_URL = CANONICAL_DOMAIN + CANONICAL_BASE_PATH
 
 DEFAULT_LAYOUT = 'entry'
+RESERVED_PAGES = ('index', 'archive')
+
 _UNSET = object()
 
 
@@ -273,8 +275,16 @@ class EntryList(object):
     def __getitem__(self, idx):
         return self.entries.__getitem__(idx)
 
-    def sort(self, *a, **kw):
-        return self.entries.sort(*a, **kw)
+    def sort(self, key=None, reverse=None):
+        """Sort the entry list by a *key* function, defaulting to sorting by
+        publish date. Unlike the built-in :meth:`list.sort`, the
+        EntryList is sorted in reverse order by default. Change this
+        with *reverse* set to *True*.
+        """
+        if key is None:
+            key = lambda e: e.publish_date or datetime.now()
+        reverse = True if reverse is None else reverse
+        return self.entries.sort(key=key, reverse=reverse)
 
 
 class Site(object):
@@ -465,9 +475,13 @@ class Site(object):
                         self.tag_map[tag].append(entry)
                     except KeyError:
                         self.tag_map[tag] = EntryList([entry], tag=tag)
+        # Sorting the EntryLists
+        self.entries.sort()
+        self.draft_entries.sort()  # sorting drafts/special pages does do much
+        self.special_entries.sort()
+        for tag, entry_list in self.tag_map.items():
+            entry_list.sort()
 
-        self.entries.sort(key=lambda e: e.publish_date or datetime.now(),
-                          reverse=True)
         for i, entry in enumerate(self.entries, start=1):
             start_next = max(0, i - NEXT_ENTRY_COUNT)
             entry.next_entries = self.entries[start_next:i - 1][::-1]
@@ -488,7 +502,7 @@ class Site(object):
             raise ValueError('duplicate entry IDs detected: %r' % dup_id_map)
         self._call_custom_hook('post_validate')
 
-        # TODO: assert necessary templates are present (post.html, etc.)
+        # TODO: assert necessary templates are present (entry.html, etc.)
 
     @rec_dec(chert_log.critical('render site'))
     def render(self):
