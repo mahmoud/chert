@@ -86,7 +86,7 @@ _UNSET = object()
 
 
 chert_log = Logger('chert')  # TODO: separate load/render logs?
-stderr_fmt = Formatter('{end_local_iso8601_noms_notz} - {message} ({extras})')
+stderr_fmt = Formatter('{end_local_iso8601_noms_notz} - {message}')
 stderr_emt = StreamEmitter('stderr')
 stderr_sink = SensibleSink(formatter=stderr_fmt,
                            emitter=stderr_emt)
@@ -114,6 +114,24 @@ def rec_dec(record, inject_as=None):
                 return func(*a, **kw)
         return wrapped_func
     return func_wrapper
+
+
+def logged_open(path, mode='rb'):
+    # TODO: configurable level
+    # TODO: needs to be a context manager of its own, composing the
+    # logging and opening together
+
+    open_type = mode[0]
+    if open_type == 'r':
+        msg = 'opening {path} for reading'
+    elif open_type == 'w':
+        msg = 'opening {path} for writing'
+    elif open_type == 'a':
+        msg = 'opening {path} for appending'
+    else:
+        msg = 'opening {path}'
+    with chert_log.critical(msg, path=path):
+        return open(path, mode)
 
 
 class Entry(object):
@@ -293,29 +311,32 @@ class Site(object):
         self.inline_md_renderer = Markdown(extensions=INLINE_MD_EXTENSIONS)
         self._load_atom_template()
 
-    def _set_path(self, name, path, default_prefix=None, required=True):
+    def _set_path(self, name, path, default_suffix=None, required=True):
         """Set a path.
 
         Args:
             name: name of attribute (e.g., input_path)
             path: the path or None
-            default_prefix: if path is None, self.input_path +
-                default_prefix is used. The input_path should already
+            default_suffix: if path is None, self.input_path +
+                default_suffix is used. The input_path should already
                 be set.
             required: raise an error if path does not exist
         """
-        with chert_log.debug('set path', path_name=name, path_val=path):
+        with chert_log.debug('set {path_name} path to {path_val}',
+                             path_name=name, path_val=path) as rec:
             self._paths[name] = path
             if path:
                 self.paths[name] = abspath(path)
-            elif default_prefix:
-                self.paths[name] = pjoin(self.input_path, default_prefix)
+            elif default_suffix:
+                self.paths[name] = pjoin(self.input_path, default_suffix)
             else:
-                raise ValueError('no path or default prefix set for %r' % name)
+                raise ValueError('no path or default set for %r' % name)
             if required:
                 if not os.path.exists(self.paths[name]):
                     raise RuntimeError('expected existent %s path, not %r'
                                        % (name, self.paths[name]))
+            rec.success('set {path_name} path to {path_val}',
+                        path_val=self.paths[name])
             return
 
     def _load_atom_template(self):
@@ -349,6 +370,7 @@ class Site(object):
         ret['title'] = site_config.get('title', SITE_TITLE)
         ret['head_title'] = site_config.get('title', ret['title'])
         ret['tagline'] = site_config.get('tagline', '')
+        # TODO: primary + secondary links
         ret['main_links'] = site_config.get('main_links', [])
         ret['alt_links'] = site_config.get('alt_links', [])
         ret['lang_code'] = site_config.get('lang_code', 'en')
@@ -361,6 +383,7 @@ class Site(object):
         ret['canonical_feed_url'] = ret['feed_url'] + 'atom.xml'
         ret['last_generated'] = format_date(datetime.now())
         ret['export_html_ext'] = EXPORT_HTML_EXT
+        ret['export_src_ext'] = EXPORT_SRC_EXT
         return ret
 
     @property
@@ -396,7 +419,8 @@ class Site(object):
             self.custom_mod = imp.load_source(mod_name, custom_mod_path)
 
     def _call_custom_hook(self, hook_name):
-        with chert_log.debug('call custom %s hook' % hook_name,
+        with chert_log.debug('call custom {hook_name} hook',
+                             hook_name=hook_name,
                              reraise=False) as rec:
             if not self.custom_mod:
                 # TODO: success or failure?
@@ -524,7 +548,8 @@ class Site(object):
         self._call_custom_hook('pre_export')
         output_path = self.paths['output_path']
 
-        mkdir_p(output_path)
+        with chert_log.critical('create output path'):
+            mkdir_p(output_path)
 
         def export_entry(entry):
             entry_src_fn = entry.entry_id + EXPORT_SRC_EXT
@@ -532,13 +557,10 @@ class Site(object):
             src_output_path = pjoin(output_path, entry_src_fn)
             html_output_path = pjoin(output_path, entry_html_fn)
 
-            with open(html_output_path, 'w') as f:
-                print 'writing to', html_output_path
+            with logged_open(html_output_path, 'w') as f:
                 f.write(entry.rendered_html.encode('utf-8'))
-            with open(src_output_path, 'w') as f:
-                print 'writing to', src_output_path
+            with logged_open(src_output_path, 'w') as f:
                 f.write(entry.source_text.encode('utf-8'))
-
 
         for entry in self.entries:
             export_entry(entry)
@@ -553,30 +575,30 @@ class Site(object):
             index_content = self.entries[0].rendered_html
         else:
             index_content = 'No entries yet!'
-        with open(index_path, 'w') as f:
-            print 'writing to', index_path
+        with logged_open(index_path, 'w') as f:
             f.write(index_content.encode('utf-8'))
 
         # atom feeds
         atom_path = pjoin(output_path, 'atom.xml')
-        with open(atom_path, 'w') as f:
+        with logged_open(atom_path, 'w') as f:
             f.write(self.entries.rendered_feed.encode('utf-8'))
         for tag, entry_list in self.tag_map.items():
             tag_path = pjoin(output_path, entry_list.path_part)
             mkdir_p(tag_path)
             atom_path = pjoin(tag_path, 'atom.xml')
             archive_path = pjoin(tag_path, 'index.html')
-            with open(atom_path, 'w') as f:
+            with logged_open(atom_path, 'w') as f:
                 f.write(entry_list.rendered_feed.encode('utf-8'))
-            with open(archive_path, 'w') as f:
+            with logged_open(archive_path, 'w') as f:
                 f.write(entry_list.rendered_html.encode('utf-8'))
 
         # copy all directories under the theme path
         for sdn in get_subdirectories(self.theme_path):
             cur_src_dir = pjoin(self.theme_path, sdn)
             cur_dest_dir = pjoin(output_path, sdn)
-            print 'copying from', cur_src_dir, 'to', cur_dest_dir
-            copytree(cur_src_dir, cur_dest_dir)
+            with chert_log.critical('copy assets {src} to {dest}',
+                                    src=cur_src_dir, dest=cur_dest_dir):
+                copytree(cur_src_dir, cur_dest_dir)
         self._call_custom_hook('post_export')
 
     def serve(self):
@@ -604,13 +626,8 @@ class Site(object):
             if serving:
                 print 'Changed %s files, regenerating...' % len(changed)
                 server.shutdown()
-            try:
+            with chert_log.critical('site generation', reraise=False):
                 self.process()
-            except KeyboardInterrupt:
-                raise
-            except Exception:
-                exc_info = ExceptionInfo.from_current()
-                print exc_info.get_formatted()
             print 'Serving from %s' % output_path
             os.chdir(abspath(output_path))
             print 'Serving at http://%s:%s%s' % (host, port, base_url)
