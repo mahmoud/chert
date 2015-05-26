@@ -103,6 +103,15 @@ def canonicalize_links(text, base):
     return _link_re.sub(r'\g<attribute>="' + base + '/', text)
 
 
+def _ppath(path):
+    if not path.startswith('/'):
+        return path
+    rel_path = os.path.relpath(path, input_path)
+    if rel_path.startswith('..'):
+        return path
+    return rel_path
+
+
 def rec_dec(record, inject_as=None):
     def func_wrapper(func):
         def wrapped_func(*a, **kw):
