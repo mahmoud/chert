@@ -31,3 +31,9 @@
 
 * make loads idempotent instead of explicit reset (was getting
   duplicates in EntryLists on server reload)
+
+* list styles are a bit spacey?
+
+* Put a README and a TODO in the scaffold
+
+* Last-generated timezone issue?
