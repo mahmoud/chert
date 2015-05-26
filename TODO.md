@@ -35,3 +35,5 @@
 * list styles are a bit spacey?
 
 * Last-generated timezone issue?
+
+* logs directory (+ add gitignore and note in scaffold README)
