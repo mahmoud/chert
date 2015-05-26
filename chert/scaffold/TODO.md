@@ -1,3 +1,8 @@
+# Chert Site TODO
+
+Welcome to your new Chert site! If you're already familiar with Chert
+and its various interfaces, feel free to ignore or delete this file,
+otherwise hopefully it proves a useful guide!
 
 ## Starting
 
@@ -39,3 +44,9 @@
 * Set up SSH keys
 * Ensure rsync is installed on the local machine
 * Run `chert publish`
+* Create [a new Github Issue][chert_issues] letting the Chert
+  maintainer know that there's another Chert site. Definitely do this
+  step if you've customized Chert in any way, either via `custom.py`
+  or a new theme. Community thrives on variety! Thanks for using Chert!
+
+[chert_issues]: https://github.com/mahmoud/chert/issues
