@@ -301,6 +301,8 @@ class Site(object):
         set_path('config_path', kw.pop('config_path', None), 'config.yaml')
         set_path('entries_path', kw.pop('entries_path', None), 'entries')
         set_path('theme_path', kw.pop('theme_path', None), 'theme')
+        set_path('uploads_path', kw.pop('uploads_path', None), 'uploads',
+                 required=False)
         set_path('output_path', kw.pop('output_path', None), 'site',
                  required=False)
         self.reset()
@@ -405,6 +407,10 @@ class Site(object):
     @property
     def theme_path(self):
         return self.paths['theme_path']
+
+    @property
+    def uploads_path(self):
+        return self.paths['uploads_path']
 
     @property
     def output_path(self):
@@ -616,13 +622,30 @@ class Site(object):
             with logged_open(archive_path, 'w') as f:
                 f.write(entry_list.rendered_html.encode('utf-8'))
 
-        # copy all directories under the theme path
+        # copy assets, i.e., all directories under the theme path
         for sdn in get_subdirectories(self.theme_path):
             cur_src_dir = pjoin(self.theme_path, sdn)
             cur_dest_dir = pjoin(output_path, sdn)
             with chert_log.critical('copy assets {src} to {dest}',
                                     src=cur_src_dir, dest=cur_dest_dir):
                 copytree(cur_src_dir, cur_dest_dir)
+
+        # optionally symlink the uploads directory.  this is an
+        # important step for sites with uploads because Chert's
+        # default rsync behavior picks up on these uploads by
+        # following the symlink.
+        with chert_log.critical('link uploads directory') as rec:
+            uploads_link_path = pjoin(output_path, 'uploads')
+            if not os.path.isdir(self.uploads_path):
+                rec.failure('no uploads directory at {}', self.uploads_path)
+            else:
+                message = None
+                if os.path.islink(uploads_link_path):
+                    os.unlink(uploads_link_path)
+                    message = 'refreshed existing uploads symlink'
+                os.symlink(self.uploads_path, uploads_link_path)
+                rec.success(message)
+
         self._call_custom_hook('post_export')
 
     def serve(self):
@@ -674,7 +697,7 @@ class Site(object):
             rsync_cmd = shell_quote(rsync_cmd)
         # TODO: add -e 'ssh -o "NumberOfPasswordPrompts 0"' to fail if
         # ssh keys haven't been set up.
-        rsync_flags = prod_config.get('rsync_flags', 'avzP')
+        rsync_flags = prod_config.get('rsync_flags', 'avzPk')
         local_site_path = self.output_path
         if not local_site_path.endswith('/'):
             local_site_path += '/'  # not just cosmetic; rsync needs this
