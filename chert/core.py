@@ -21,7 +21,6 @@ import htmlentitydefs
 
 import yaml
 from markdown import Markdown
-from boltons.tbutils import ExceptionInfo
 from boltons.strutils import slugify
 from boltons.dictutils import OrderedMultiDict as OMD
 from boltons.fileutils import mkdir_p, copytree, iter_find_files
@@ -173,7 +172,7 @@ class Entry(object):
 
     @property
     def tags(self):
-        return self.metadata.get('tags', [])
+        return self.metadata.setdefault('tags', [])
 
     @property
     def layout(self):
@@ -187,6 +186,8 @@ class Entry(object):
     @classmethod
     def from_path(cls, in_path):
         entry_dict, text = read_yaml_text(in_path)
+        for key in entry_dict.keys():
+            entry_dict[key.lower()] = entry_dict.pop(key)
         entry_dict['source_text'] = open(in_path).read()
         entry_dict['content'] = text
         entry_dict['input_path'] = in_path
@@ -314,7 +315,7 @@ class Site(object):
         self.entries = self._entry_list_type()
         self.draft_entries = self._entry_list_type()
         self.special_entries = self._entry_list_type()
-        self.tag_map = {}
+        self._rebuild_tag_map()
 
         # TODO: take optional kwarg
         self.config = yaml.load(logged_open(self.paths['config_path']))
@@ -405,6 +406,10 @@ class Site(object):
         return self.paths['input_path']
 
     @property
+    def entries_path(self):
+        return self.paths['entries_path']
+
+    @property
     def theme_path(self):
         return self.paths['theme_path']
 
@@ -476,17 +481,13 @@ class Site(object):
                 self.special_entries.append(entry)
             else:
                 self.entries.append(entry)
-                for tag in entry.tags:
-                    try:
-                        self.tag_map[tag].append(entry)
-                    except KeyError:
-                        self.tag_map[tag] = EntryList([entry], tag=tag)
+
         # Sorting the EntryLists
         self.entries.sort()
         self.draft_entries.sort()  # sorting drafts/special pages does do much
         self.special_entries.sort()
-        for tag, entry_list in self.tag_map.items():
-            entry_list.sort()
+
+        self._rebuild_tag_map()
 
         for i, entry in enumerate(self.entries, start=1):
             start_next = max(0, i - NEXT_ENTRY_COUNT)
@@ -494,6 +495,17 @@ class Site(object):
             entry.prev_entries = self.entries[i:i + PREV_ENTRY_COUNT]
 
         self._call_custom_hook('post_load')
+
+    def _rebuild_tag_map(self):
+        self.tag_map = {}
+        for entry in self.entries:
+            for tag in entry.tags:
+                try:
+                    self.tag_map[tag].append(entry)
+                except KeyError:
+                    self.tag_map[tag] = EntryList([entry], tag=tag)
+        for tag, entry_list in self.tag_map.items():
+            entry_list.sort()
 
     @rec_dec(chert_log.critical('validate site'))
     def validate(self):

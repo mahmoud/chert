@@ -34,6 +34,4 @@
 
 * list styles are a bit spacey?
 
-* Put a README and a TODO in the scaffold
-
 * Last-generated timezone issue?
