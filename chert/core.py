@@ -394,9 +394,8 @@ class Site(object):
         ret['title'] = site_config.get('title', SITE_TITLE)
         ret['head_title'] = site_config.get('title', ret['title'])
         ret['tagline'] = site_config.get('tagline', '')
-        # TODO: primary + secondary links
-        ret['main_links'] = site_config.get('main_links', [])
-        ret['alt_links'] = site_config.get('alt_links', [])
+        ret['primary_links'] = site_config.get('primary_links', [])
+        ret['secondary_links'] = site_config.get('secondary_links', [])
         ret['lang_code'] = site_config.get('lang_code', 'en')
         ret['copyright_notice'] = site_config.get('copyright', SITE_COPYRIGHT)
         ret['author_name'] = site_config.get('author', SITE_AUTHOR)

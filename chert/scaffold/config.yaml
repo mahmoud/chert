@@ -5,7 +5,7 @@ site:
   tagline: Sharp and sparky static sites
   copyright: >-
     &copy; 2015 <img height="14" src="/img/by-sa.png" />
-  main_links:
+  primary_links:
     - text: About
       href: /about.html
     - text: Github
