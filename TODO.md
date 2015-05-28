@@ -4,9 +4,6 @@
   converted into values available in the render context. This way
   users can customize themes to include custom computable values.
 
-* How to set ID for the feed and entries such that they remain stable?
-  Is canonical URL sufficient?
-
 * File format for short-form posts (yaml with explicit content
   field). Generic approach: if content field is not defined, expect
   the next document in the file to contain the content. If content

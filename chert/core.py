@@ -229,6 +229,14 @@ class Entry(object):
         ret['output_filename'] = ret['entry_id'] + EXPORT_HTML_EXT
         return ret
 
+    def _autosummarize(self):
+        if getattr(self, 'rendered_content', None) is None:
+            raise ValueError('expected self.rendered_content to be set.'
+                             ' render the entry, then autosummarize.')
+        rendered_text = html2text(self.rendered_content)
+        summary = ' '.join(rendered_text.split()[:28]) + '...'
+        return summary
+
 
 class EntryList(object):
     # should end in a slash
@@ -555,11 +563,8 @@ class Site(object):
                                                                CANONICAL_DOMAIN)
             imdr.reset()
 
-            # TODO:
             if not entry.summary:
-                rendered_text = html2text(entry.rendered_content)
-                entry.summary = ' '.join(rendered_text.split()[:28]) + '...'
-            return
+                entry.summary = entry._autosummarize()
 
         def render_html(entry, with_links=False):
             tmpl_name = entry.layout + LAYOUT_EXT
