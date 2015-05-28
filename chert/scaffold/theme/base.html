@@ -35,12 +35,12 @@
             <p id="tagline-p">{site.tagline}</p>
             {?site.primary_links}<p id="pri-links-p">
               {#site.primary_links}
-              <a title="{.desc}" href="{.href}">{.text}</a>
+              <a {?is_external} target="_blank"{/is_external} title="{.desc}" href="{.href}">{.text}</a>
               {/site.primary_links}
             </p>{/site.primary_links}
             {?site.secondary_links}<p id="sec-links-p">
             {#site.secondary_links}
-              <a title="{.desc}" href="{.href}">{.text}</a>
+              <a {?is_external} target="_blank"{/is_external} title="{.desc}" href="{.href}">{.text}</a>
             {/site.secondary_links}
             </p>{/site.secondary_links}
             <hr>

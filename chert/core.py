@@ -31,6 +31,8 @@ from dateutil.parser import parse
 from markdown.extensions.toc import TocExtension
 from markdown.extensions.codehilite import CodeHiliteExtension
 
+from hematite.url import URL
+
 DEBUG = False
 if DEBUG:
     pdb_on_signal()
@@ -394,8 +396,8 @@ class Site(object):
         ret['title'] = site_config.get('title', SITE_TITLE)
         ret['head_title'] = site_config.get('title', ret['title'])
         ret['tagline'] = site_config.get('tagline', '')
-        ret['primary_links'] = site_config.get('primary_links', [])
-        ret['secondary_links'] = site_config.get('secondary_links', [])
+        ret['primary_links'] = self._get_links('site', 'primary_links')
+        ret['secondary_links'] = self._get_links('site', 'secondary_links')
         ret['lang_code'] = site_config.get('lang_code', 'en')
         ret['copyright_notice'] = site_config.get('copyright', SITE_COPYRIGHT)
         ret['author_name'] = site_config.get('author', SITE_AUTHOR)
@@ -408,6 +410,15 @@ class Site(object):
         ret['export_html_ext'] = EXPORT_HTML_EXT
         ret['export_src_ext'] = EXPORT_SRC_EXT
         return ret
+
+    def _get_links(self, group, name):
+        link_list = list(self.get_config(group, name, []))
+        for link in link_list:
+            if link['href'] and URL(link['href']).host:
+                link['is_external'] = True
+            else:
+                link['is_external'] = False
+        return link_list
 
     @property
     def input_path(self):
