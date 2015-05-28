@@ -52,12 +52,14 @@ to themselves. Five levels of headings to keep your content company.
 Finally, it's time for that very special and very ubiquitous code snippet,
 with highlighting provided by [pygments][pygments]:
 
-    :::python
-    def greet(name):
-        print('Hello, %s!' % name)
+```python hl_lines="1"
+# line highlighting is also supported
+def greet(name):
+    print('Hello, %s!' % name)
 
-    # Prints the greeting to sys.stdout
-    greet('world')
+# Prints the greeting to sys.stdout
+greet('world')
+```
 
 **Hello, world!** And enjoy using Chert!
 

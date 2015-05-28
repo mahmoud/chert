@@ -52,7 +52,8 @@ LENGTH_BOUNDARIES = [(0, 'short'),
 READING_WPM = 200.0
 
 BASE_MD_EXTENSIONS = ['markdown.extensions.def_list',
-                      'markdown.extensions.footnotes']
+                      'markdown.extensions.footnotes',
+                      'markdown.extensions.fenced_code']
 _HILITE = CodeHiliteExtension()
 _TOC_EXTENSION = TocExtension(title='Contents', anchorlink=True, baselevel=2)
 # baselevel is actually a really useful feature regardless of TOC usage

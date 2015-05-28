@@ -1,9 +1,5 @@
 # TODO
 
-* Look for a user-controlled module that is imported/executed and
-  converted into values available in the render context. This way
-  users can customize themes to include custom computable values.
-
 * File format for short-form posts (yaml with explicit content
   field). Generic approach: if content field is not defined, expect
   the next document in the file to contain the content. If content
@@ -34,3 +30,5 @@
 * Last-generated timezone issue?
 
 * logs directory (+ add gitignore and note in scaffold README)
+
+* Some sort of internal linking shorthand, i.e., make linking to other entries easy
