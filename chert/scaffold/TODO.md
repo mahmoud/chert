@@ -38,11 +38,14 @@ otherwise hopefully it proves a useful guide!
 
 ## Publishing
 
-* Procure a server
+* Procure a web server with SSH access
 * Save the relevant details (host, username, path) under the `prod`
   section of `config.yaml`
+* Set up Google Analytics and put your UA-XXXXXX-X code in config.yaml
 * Set up SSH keys
+  * Reference: https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2
 * Ensure rsync is installed on the local machine
+  * run `which rsync` or just try running `rsync`
 * Run `chert publish`
 * Create [a new Github Issue][chert_issues] letting the Chert
   maintainer know that there's another Chert site. Definitely do this

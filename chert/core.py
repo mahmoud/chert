@@ -410,6 +410,8 @@ class Site(object):
         ret['lang_code'] = site_config.get('lang_code', 'en')
         ret['copyright_notice'] = site_config.get('copyright', SITE_COPYRIGHT)
         ret['author_name'] = site_config.get('author', SITE_AUTHOR)
+        ret['enable_analytics'] = site_config.get('enable_analytics', True)
+        ret['analytics_code'] = self._get_analytics_code()
         ret['canonical_url'] = CANONICAL_URL
         ret['canonical_domain'] = CANONICAL_DOMAIN
         ret['canonical_base_path'] = CANONICAL_BASE_PATH
@@ -419,6 +421,24 @@ class Site(object):
         ret['export_html_ext'] = EXPORT_HTML_EXT
         ret['export_src_ext'] = EXPORT_SRC_EXT
         return ret
+
+    def _get_analytics_code(self):
+        with chert_log.info('set analytics code') as rec:
+            code = self.get_config('site', 'analytics_code', None)
+            if code is None:
+                rec.failure('site.analytics_code not set in config.yaml')
+                return ''
+            _analytics_re = re.compile("(?P<code>[\w-]+)")
+            match = _analytics_re.search(unicode(code))
+            if not match:
+                rec.failure('analytics code blank or invalid: {!r}', code)
+                return ''
+            code = match.group('code')
+            if len(code) < 6:
+                rec.failure('analytics code too short: {!r}', code)
+                return ''
+            rec.success('analytics code set to {!r}', code)
+        return code
 
     def _get_links(self, group, name):
         link_list = list(self.get_config(group, name, []))

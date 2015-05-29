@@ -14,8 +14,6 @@
   basis (some posts, e.g., myths of python) may have internal numbers
   and that would look strange)
 
-* analytics code in config
-
 * superfeedr integration (pulled from PythonDoesBlog?)
 
 * Data pages (YAML files that get rendered to markdown at load time)
@@ -31,4 +29,9 @@
 
 * logs directory (+ add gitignore and note in scaffold README)
 
-* Some sort of internal linking shorthand, i.e., make linking to other entries easy
+* Some sort of internal linking shorthand, i.e., make linking to other
+  entries easy (markdown.extensions.wikilinks?)
+
+* Global links and abbreviations appended to the Markdown source of
+  all posts before rendering (abbreviations powered by
+  markdown.extensions.abbr)
