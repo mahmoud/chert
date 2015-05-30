@@ -11,7 +11,7 @@
     <p>{rendered_content|s}</p>
   </div>
   <p class="metadata-p">
-    <a href="/{entry_id}{site.export_html_ext}" class="post-timestamp">{publish_date}</a>
+    <a href="/{entry_id}{site.export_html_ext}" title="{publish_timestamp_local}" class="post-timestamp">{publish_date}</a>
     {?tags}
     <span class="tags">
       {#tags}<a href="/tagged/{.}">#{.}</a> {/tags}

@@ -23,6 +23,7 @@ import yaml
 from markdown import Markdown
 from boltons.strutils import slugify
 from boltons.dictutils import OrderedMultiDict as OMD
+from boltons.tzutils import LocalTZ, UTC
 from boltons.fileutils import mkdir_p, copytree, iter_find_files
 from boltons.debugutils import pdb_on_signal
 from lithoxyl import Logger, SensibleSink, Formatter, StreamEmitter
@@ -38,7 +39,8 @@ if DEBUG:
     pdb_on_signal()
 
 CUR_PATH = os.path.dirname(abspath(__file__))
-DEFAULT_DATE = datetime(2000, 1, 1)
+DEFAULT_DATE = datetime(2001, 2, 3, microsecond=456789)
+print DEFAULT_DATE
 
 SITE_TITLE = 'Chert'
 SITE_HEAD_TITLE = SITE_TITLE  # goes in the head tag
@@ -68,6 +70,7 @@ ENTRY_PAT = '*.md'
 LAYOUT_EXT = '.html'
 LAYOUT_PAT = '*' + LAYOUT_EXT
 
+FEED_FILENAME = 'atom.xml'
 EXPORT_SRC_EXT = '.md'
 EXPORT_HTML_EXT = '.html'  # some people might prefer .htm
 
@@ -157,11 +160,17 @@ class Entry(object):
         self.source_text = kwargs.pop('source_text', None)
         self.input_path = kwargs.pop('input_path', None)
         self.metadata = kwargs
-
-        pub_date = self.metadata.get('publish_date')
-        self.publish_date = parse(pub_date) if pub_date else DEFAULT_DATE
-
         self.edit_list = []
+        pub_date = self.metadata.get('publish_date')
+        if not pub_date:
+            # None = not present = not published (see is_draft)
+            pub_dt = DEFAULT_DATE
+        else:
+            pub_dt = parse(pub_date)
+            if not pub_dt.tzinfo:
+                pub_dt = pub_dt.replace(tzinfo=LocalTZ)
+        self.publish_date = pub_dt
+
         self.last_edit_date = None  # TODO
 
         # TODO: needs to be set at process time, as prev/next links change
@@ -180,7 +189,9 @@ class Entry(object):
 
     @property
     def is_draft(self):
-        return bool(self.metadata.get('draft'))
+        ret = bool(self.metadata.get('draft'))
+        ret = ret or self.publish_date is DEFAULT_DATE
+        return ret
 
     @property
     def tags(self):
@@ -222,11 +233,17 @@ class Entry(object):
             ret['prev_entries'] = [pe.to_dict() for pe in self.prev_entries]
             ret['next_entries'] = [ne.to_dict() for ne in self.next_entries]
 
-        ret['publish_date_iso8601'] = format_date(self.publish_date)
+        ret['publish_timestamp_local'] = to_timestamp(self.publish_date)
+        ret['publish_timestamp_utc'] = to_timestamp(self.publish_date,
+                                                    to_utc=True)
         if self.last_edit_date:
-            ret['update_date_iso8601'] = format_date(self.last_edit_date)
+            ret['update_timestamp_local'] = to_timestamp(self.last_edit_date)
+            ret['update_timestamp_utc'] = to_timestamp(self.last_edit_date,
+                                                       to_utc=True)
         else:
-            ret['update_date_iso8601'] = None
+            ret['update_timestamp_local'] = None
+            ret['update_timestamp_utc'] = None
+
         ret['output_filename'] = ret['entry_id'] + EXPORT_HTML_EXT
         return ret
 
@@ -258,7 +275,7 @@ class EntryList(object):
         canonical_url = site_info['canonical_url']
         if self.tag:
             canonical_url += self.tag_path_part + self.tag + '/'
-        canonical_feed_url = canonical_url + 'atom.xml'
+        canonical_feed_url = canonical_url + FEED_FILENAME
         ret['tag'] = self.tag or ''
         ret['canonical_url'] = canonical_url
         ret['canonical_feed_url'] = canonical_feed_url
@@ -303,7 +320,7 @@ class EntryList(object):
         with *reverse* set to *True*.
         """
         if key is None:
-            key = lambda e: e.publish_date or datetime.now()
+            key = lambda e: e.publish_date or datetime.now(LocalTZ)
         reverse = True if reverse is None else reverse
         return self.entries.sort(key=key, reverse=reverse)
 
@@ -375,13 +392,14 @@ class Site(object):
             return
 
     def _load_atom_template(self):
-        default_atom_tmpl_path = pjoin(CUR_PATH, 'atom.xml')
-        atom_tmpl_path = pjoin(self.theme_path, 'atom.xml')
+        default_atom_tmpl_path = pjoin(CUR_PATH, FEED_FILENAME)
+        atom_tmpl_path = pjoin(self.theme_path, FEED_FILENAME)
         if not os.path.exists(atom_tmpl_path):
             atom_tmpl_path = default_atom_tmpl_path
 
         # TODO: defer opening to loading?
-        self.atom_template = Template('atom.xml', open(atom_tmpl_path).read())
+        atom_tmpl_str = open(atom_tmpl_path).read()
+        self.atom_template = Template(FEED_FILENAME, atom_tmpl_str)
 
     def get_config(self, section, key=None, default=_UNSET):
         try:
@@ -415,9 +433,12 @@ class Site(object):
         ret['canonical_url'] = CANONICAL_URL
         ret['canonical_domain'] = CANONICAL_DOMAIN
         ret['canonical_base_path'] = CANONICAL_BASE_PATH
-        ret['feed_url'] = CANONICAL_BASE_PATH + 'atom.xml'
-        ret['canonical_feed_url'] = ret['feed_url'] + 'atom.xml'
-        ret['last_generated'] = format_date(datetime.now())
+        ret['feed_url'] = CANONICAL_BASE_PATH + FEED_FILENAME
+        ret['canonical_feed_url'] = CANONICAL_URL + FEED_FILENAME
+
+        now = datetime.now(LocalTZ)
+        ret['last_generated'] = to_timestamp(now)
+        ret['last_generated_utc'] = to_timestamp(now, to_utc=True)
         ret['export_html_ext'] = EXPORT_HTML_EXT
         ret['export_src_ext'] = EXPORT_SRC_EXT
         return ret
@@ -666,7 +687,7 @@ class Site(object):
             f.write(self.entries.rendered_html.encode('utf-8'))
 
         # atom feeds
-        atom_path = pjoin(output_path, 'atom.xml')
+        atom_path = pjoin(output_path, FEED_FILENAME)
         with logged_open(atom_path, 'w') as f:
             f.write(self.entries.rendered_feed.encode('utf-8'))
         for tag, entry_list in self.tag_map.items():
@@ -794,8 +815,12 @@ def get_subdirectories(path):
         return []
 
 
-def format_date(dt_obj):
-    return dt_obj.strftime('%Y-%m-%dT%H:%M:%SZ')
+def to_timestamp(dt_obj, to_utc=False):
+    if to_utc and dt_obj.tzinfo:
+        dt_obj = dt_obj.astimezone(UTC)
+    if dt_obj.tzinfo in (UTC, None):
+        return dt_obj.strftime('%Y-%m-%dT%H:%M:%SZ')
+    return dt_obj.strftime('%Y-%m-%dT%H:%M:%S%z')
 
 
 def _iter_changed_files(entries_path, theme_path, interval=0.5):

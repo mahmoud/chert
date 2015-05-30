@@ -5,7 +5,7 @@
   <subtitle type="text">{site.tagline}</subtitle>
   <link rel="alternate" type="text/html" href="{list.canonical_url}" />
   <link rel="self" type="application/atom+xml" href="{list.canonical_feed_url}" />
-  <updated>{site.last_generated}</updated>
+  <updated>{site.last_generated_utc}</updated>
   <sy:updatePeriod>hourly</sy:updatePeriod>
   <sy:updateFrequency>1</sy:updateFrequency>
 
@@ -20,8 +20,8 @@
     </author>
     <title>{.title}</title>
     <link rel="alternate" type="text/html" href="{site.canonical_url}{.output_filename}" />
-    <published>{.publish_date_iso8601}</published>
-    <updated>{?.update_date_iso8601}{.update_date_iso8601}{:else}{.publish_date_iso8601}{/update_date_iso8601}</updated>
+    <published>{.publish_timestamp_utc}</published>
+    <updated>{?.update_timestamp_utc}{.update_timestamp_utc}{:else}{.publish_timestamp_utc}{/update_timestamp_utc}</updated>
     {#tags}<category term="{.}"/>{/tags}
     <content type="html">{.inline_rendered_content}</content>
   </entry>
