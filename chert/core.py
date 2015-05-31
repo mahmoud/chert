@@ -79,6 +79,7 @@ DEV_SERVER_PORT = 8080
 DEV_SERVER_BASE_URL = '/'
 
 _punct_re = re.compile('[%s]+' % re.escape(string.punctuation))
+_analytics_re = re.compile("(?P<code>[\w-]+)")
 
 CANONICAL_DOMAIN = 'http://sedimental.org'
 CANONICAL_BASE_PATH = '/'
@@ -109,7 +110,7 @@ def canonicalize_links(text, base):
     return _link_re.sub(r'\g<attribute>="' + base + '/', text)
 
 
-def _ppath(path):
+def _ppath(path):  # lithoxyl todo
     if not path.startswith('/'):
         return path
     rel_path = os.path.relpath(path, input_path)
@@ -211,7 +212,7 @@ class Entry(object):
         entry_dict, text = read_yaml_text(in_path)
         for key in entry_dict.keys():
             entry_dict[key.lower()] = entry_dict.pop(key)
-        entry_dict['source_text'] = open(in_path).read()
+        entry_dict['source_text'] = logged_open(in_path).read()
         entry_dict['content'] = text
         entry_dict['input_path'] = in_path
         return cls.from_dict(entry_dict)
@@ -449,7 +450,6 @@ class Site(object):
             if code is None:
                 rec.failure('site.analytics_code not set in config.yaml')
                 return ''
-            _analytics_re = re.compile("(?P<code>[\w-]+)")
             match = _analytics_re.search(unicode(code))
             if not match:
                 rec.failure('analytics code blank or invalid: {!r}', code)
