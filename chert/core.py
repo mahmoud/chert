@@ -76,7 +76,7 @@ EXPORT_HTML_EXT = '.html'  # some people might prefer .htm
 
 DEV_SERVER_HOST = '0.0.0.0'
 DEV_SERVER_PORT = 8080
-DEV_SERVER_BASE_URL = '/'
+DEV_SERVER_BASE_PATH = '/'  # TODO: merge with prod canonical_base_path?
 
 _punct_re = re.compile('[%s]+' % re.escape(string.punctuation))
 _analytics_re = re.compile("(?P<code>[\w-]+)")
@@ -727,9 +727,10 @@ class Site(object):
         self._call_custom_hook('post_export')
 
     def serve(self):
-        host = DEV_SERVER_HOST
-        port = int(DEV_SERVER_PORT)
-        base_url = DEV_SERVER_BASE_URL
+        dev_config = self.get_config('dev')
+        host = dev_config.get('server_host', DEV_SERVER_HOST)
+        port = dev_config.get('server_port', int(DEV_SERVER_PORT))
+        base_url = dev_config.get('base_path', DEV_SERVER_BASE_PATH)
 
         class Handler(SimpleHTTPRequestHandler):
             def send_head(self):
