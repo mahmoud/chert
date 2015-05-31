@@ -431,11 +431,17 @@ class Site(object):
         ret['author_name'] = site_config.get('author', SITE_AUTHOR)
         ret['enable_analytics'] = site_config.get('enable_analytics', True)
         ret['analytics_code'] = self._get_analytics_code()
-        ret['canonical_url'] = CANONICAL_URL
-        ret['canonical_domain'] = CANONICAL_DOMAIN
-        ret['canonical_base_path'] = CANONICAL_BASE_PATH
-        ret['feed_url'] = CANONICAL_BASE_PATH + FEED_FILENAME
-        ret['canonical_feed_url'] = CANONICAL_URL + FEED_FILENAME
+
+        prod_config = self.get_config('prod')
+        ret['canonical_domain'] = prod_config.get('canonical_domain',
+                                                  CANONICAL_DOMAIN).rstrip('/')
+        ret['canonical_base_path'] = prod_config.get('canonical_base_path',
+                                                     CANONICAL_BASE_PATH)
+        if not ret['canonical_base_path'].endswith('/'):
+            ret['canonical_base_path'] += '/'
+        ret['canonical_url'] = ret['canonical_domain'] + ret['canonical_base_path']
+        ret['feed_url'] = ret['canonical_base_path'] + FEED_FILENAME
+        ret['canonical_feed_url'] = ret['canonical_url'] + FEED_FILENAME
 
         now = datetime.now(LocalTZ)
         ret['last_generated'] = to_timestamp(now)
