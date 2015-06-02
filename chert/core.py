@@ -39,7 +39,8 @@ if DEBUG:
     pdb_on_signal()
 
 CUR_PATH = os.path.dirname(abspath(__file__))
-DEFAULT_DATE = datetime(2001, 2, 3, microsecond=456789)
+DEFAULT_DATE = datetime(2001, 2, 3, microsecond=456789, tzinfo=UTC)
+
 
 SITE_TITLE = 'Chert'
 SITE_HEAD_TITLE = SITE_TITLE  # goes in the head tag
@@ -191,6 +192,7 @@ class Entry(object):
     def is_draft(self):
         ret = bool(self.metadata.get('draft'))
         ret = ret or self.publish_date is DEFAULT_DATE
+        ret = ret or self.publish_date > datetime.now(LocalTZ)
         return ret
 
     @property

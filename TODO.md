@@ -33,5 +33,3 @@
 * Global links and abbreviations appended to the Markdown source of
   all posts before rendering (abbreviations powered by
   markdown.extensions.abbr)
-
-* Don't publish entries with publish dates in the future
