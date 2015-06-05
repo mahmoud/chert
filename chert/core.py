@@ -6,6 +6,7 @@ import os
 import imp
 import time
 import string
+import shutil
 import hashlib
 import argparse
 import itertools
@@ -884,6 +885,16 @@ def read_yaml_text(path):
         return yaml_dict, text_content
 
 
+def delete_dir_contents(path):
+    for entry in os.listdir(path):
+        cur_path = os.path.join(path, entry)
+        if os.path.isfile(cur_path) or os.path.islink(cur_path):
+            os.unlink(cur_path)
+        elif os.path.isdir(cur_path):
+            shutil.rmtree(cur_path)
+    return
+
+
 def get_argparser():
     prs = argparse.ArgumentParser()
     subprs = prs.add_subparsers(dest='action',
@@ -900,6 +911,9 @@ def get_argparser():
                       help='generate a local copy of the site')
     subprs.add_parser('publish',
                       help='upload a Chert site to the remote server')
+    subprs.add_parser('clean',
+                      help='clean Chert output site directory')
+
     return prs
 
 
@@ -925,6 +939,10 @@ def main():
         src_dir = pjoin(CUR_PATH, 'scaffold')
         copytree(src_dir, target_dir)
         print 'Created Chert instance in directory: %s' % target_dir
+    elif action == 'clean':
+        ch = Site(os.getcwd())
+        delete_dir_contents(ch.output_path)
+        print 'Cleaned Chert output path: %s' % ch.output_path
     else:
         raise ValueError('unknown action: %s' % action)
 

@@ -8,8 +8,6 @@
 
 * Finish support for non-root-path-based installations
 
-* --clean option (effectively removes any unused files from site/)
-
 * Make ToC style (numbered or bullets) configurable on a per-post
   basis (some posts, e.g., myths of python) may have internal numbers
   and that would look strange)
