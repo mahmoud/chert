@@ -23,8 +23,6 @@
 * make loads idempotent instead of explicit reset (was getting
   duplicates in EntryLists on server reload)
 
-* list styles are a bit spacey?
-
 * logs directory (+ add gitignore and note in scaffold README)
 
 * Some sort of internal linking shorthand, i.e., make linking to other
