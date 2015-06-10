@@ -10,6 +10,10 @@
   <!-- Mobile Specific Meta -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
+  {?site.dev_mode}{?site.dev_mode_refresh_seconds}
+  <meta http-equiv="refresh" content="{site.dev_mode_refresh_seconds}" />
+  {/site.dev_mode_refresh_seconds}{/site.dev_mode}
+
   <!-- Font
   <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css"> -->
 

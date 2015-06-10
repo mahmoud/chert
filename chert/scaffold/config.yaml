@@ -21,6 +21,7 @@ dev:
   server_host: 0.0.0.0
   server_port: 8080
   base_url: /
+  autorefresh: 0  # set to a positive integer to cause the default theme to autorefresh every few seconds
 
 prod:
   canonical_domain: http://sedimental.org

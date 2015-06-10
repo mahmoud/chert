@@ -47,6 +47,7 @@ SITE_TITLE = 'Chert'
 SITE_HEAD_TITLE = SITE_TITLE  # goes in the head tag
 SITE_AUTHOR = 'Mahmoud Hashemi'
 SITE_COPYRIGHT = '&copy; 2015 Mahmoud Hashemi <img height="14" src="/img/by-sa.png" />'
+DEFAULT_AUTOREFRESH = 4
 
 PREV_ENTRY_COUNT, NEXT_ENTRY_COUNT = 5, 5
 LENGTH_BOUNDARIES = [(0, 'short'),
@@ -94,7 +95,7 @@ RESERVED_PAGES = ('index', 'archive')
 _UNSET = object()
 
 
-chert_log = Logger('chert')  # TODO: separate load/render logs?
+chert_log = Logger('chert')
 # TODO: duration_s, duration_ms, duration_us
 stderr_fmt = Formatter('{end_local_iso8601_noms_notz} - {duration_msecs}ms - {message}')
 stderr_emt = StreamEmitter('stderr')
@@ -112,6 +113,7 @@ def canonicalize_links(text, base):
 
 
 def _ppath(path):  # lithoxyl todo
+    # find module path (or package path) and relativize to that?
     if not path.startswith('/'):
         return path
     rel_path = os.path.relpath(path, input_path)
@@ -348,6 +350,10 @@ class Site(object):
                  required=False)
         self.reset()
         chert_log.debug('init site').success()
+        self.dev_mode = kw.pop('dev_mode', False)
+        if kw:
+            raise TypeError('unexpected keyword arguments: %r' % kw)
+        return
 
     def reset(self):
         """Called on __init__ and on reload before processing. Does not reset
@@ -422,6 +428,10 @@ class Site(object):
 
     def get_site_info(self):
         ret = {}
+        ret['dev_mode'] = self.dev_mode
+        refresh_secs = self.get_config('dev', 'autorefresh', DEFAULT_AUTOREFRESH) or False
+
+        ret['dev_mode_refresh_seconds'] = refresh_secs
         site_config = self.get_config('site')
         ret['title'] = site_config.get('title', SITE_TITLE)
         ret['head_title'] = site_config.get('title', ret['title'])
@@ -548,7 +558,7 @@ class Site(object):
         for ep in entry_paths:
             with chert_log.info('entry load') as rec:
                 try:
-                    entry = Entry.from_path(ep)
+                    entry = self._entry_type.from_path(ep)
                 except IOError:
                     rec.exception('unopenable entry path: {}', ep)
                     continue
@@ -580,7 +590,7 @@ class Site(object):
                 try:
                     self.tag_map[tag].append(entry)
                 except KeyError:
-                    self.tag_map[tag] = EntryList([entry], tag=tag)
+                    self.tag_map[tag] = self._entry_list_type([entry], tag=tag)
         for tag, entry_list in self.tag_map.items():
             entry_list.sort()
 
@@ -605,12 +615,12 @@ class Site(object):
         entries = self.entries
         mdr, imdr = self.md_renderer, self.inline_md_renderer
         site_info = self.get_site_info()
-
+        canonical_domain = site_info['canonical_domain']
         def render_content(entry):
             entry.rendered_content = mdr.convert(entry.content)
             mdr.reset()
             entry.inline_rendered_content = canonicalize_links(imdr.convert(entry.content),
-                                                               CANONICAL_DOMAIN)
+                                                               canonical_domain)
             imdr.reset()
 
             if not entry.summary:
@@ -922,7 +932,7 @@ def main():
     kwargs = dict(prs.parse_args()._get_kwargs())
     action = kwargs['action']
     if action == 'serve':
-        ch = Site(os.getcwd())
+        ch = Site(os.getcwd(), dev_mode=True)
         ch.serve()
     elif action == 'publish':
         ch = Site(os.getcwd())
