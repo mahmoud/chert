@@ -33,4 +33,9 @@ As for the rest of the new contents:
 If you encounter any trouble, [please create a new issue][chert_issues]!
 Enjoy your new Chert site!
 
+Unless otherwise specified, all non-code content copyright 2015
+Authors [CC-BY-SA][cc_by_sa]. All code is BSD licensed by default, see
+LICENSE for more details.
+
 [chert_issues]: https://github.com/mahmoud/chert/issues
+[cc_by_sa]: https://creativecommons.org/licenses/by-sa/4.0/

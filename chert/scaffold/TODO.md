@@ -14,6 +14,9 @@ otherwise hopefully it proves a useful guide!
   * Perform your first `git commit`!
 * Set the title, tagline, and author name in `config.yaml`
   * Update the links with the relevant social media stuff
+* Update the README, including the name and date in the copyright
+  notice at the bottom
+* Update the name and date in the LICENSE file (or choose a non-BSD license)
 
 ## Authoring
 

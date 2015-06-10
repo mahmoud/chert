@@ -4,7 +4,7 @@ site:
   author: Chert Chertington
   tagline: Sharp and sparky static sites
   copyright: >-
-    &copy; 2015 <img height="14" src="/img/by-sa.png" />
+    &copy; 2015 <a href="https://creativecommons.org/licenses/by-sa/4.0/"><img height="14" src="/img/by-sa.png" /></a>
   primary_links:
     - text: About
       href: /about.html
