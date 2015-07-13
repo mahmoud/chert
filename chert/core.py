@@ -216,7 +216,7 @@ class Entry(object):
         entry_dict, text = read_yaml_text(in_path)
         for key in entry_dict.keys():
             entry_dict[key.lower()] = entry_dict.pop(key)
-        entry_dict['source_text'] = logged_open(in_path).read()
+        entry_dict['source_text'] = logged_open(in_path).read().decode('utf-8')
         entry_dict['content'] = text
         entry_dict['input_path'] = in_path
         return cls.from_dict(entry_dict)
@@ -562,6 +562,9 @@ class Site(object):
                 except IOError:
                     rec.exception('unopenable entry path: {}', ep)
                     continue
+                except:
+                    rec.exception('entry load error: {exc_message}')
+                    continue
             if entry.is_draft:
                 self.draft_entries.append(entry)
             elif entry.is_special:
@@ -877,7 +880,7 @@ _docstart_re = re.compile(b'^---\r?\n')
 def read_yaml_text(path):
     with open(path, 'rb') as fd:
         if fd.read(3) != b'---':
-            raise ValueError('file did not start with "---": %r' % path)
+            raise ValueError("file did not start with '---': %r" % path)
         lines = []
         while True:
             line = fd.readline()
