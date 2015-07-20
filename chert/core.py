@@ -68,7 +68,7 @@ INLINE_MD_EXTENSIONS = BASE_MD_EXTENSIONS + [_HILITE_INLINE]
 # TODO: is leftover [TOC] in feed such a bad thing?
 
 ENTRY_ENCODING = 'utf-8'
-ENTRY_PAT = '*.md'
+ENTRY_PATS = ['*.md', '*.yaml']
 LAYOUT_EXT = '.html'
 LAYOUT_PAT = '*' + LAYOUT_EXT
 
@@ -156,6 +156,10 @@ def logged_open(path, mode='rb'):
         return open(path, mode)
 
 
+class StringLoaded(Exception):
+    pass
+
+
 class Entry(object):
     def __init__(self, title=None, content=None, **kwargs):
         self.title = title
@@ -164,7 +168,6 @@ class Entry(object):
         self.source_text = kwargs.pop('source_text', None)
         self.input_path = kwargs.pop('input_path', None)
         self.metadata = kwargs
-        self.edit_list = []
         pub_date = self.metadata.get('publish_date')
         if not pub_date:
             # None = not present = not published (see is_draft)
@@ -175,11 +178,11 @@ class Entry(object):
                 pub_dt = pub_dt.replace(tzinfo=LocalTZ)
         self.publish_date = pub_dt
 
+        self.edit_list = []  # TODO
         self.last_edit_date = None  # TODO
 
-        # TODO: needs to be set at process time, as prev/next links change
-        hash_content = (self.title + self.content).encode('utf-8')
-        self.entry_hash = hashlib.sha256(hash_content).hexdigest()
+        # hash_content = (self.title + self.content).encode('utf-8')
+        # self.entry_hash = hashlib.sha256(hash_content).hexdigest()
 
         no_punct = _punct_re.sub('', self.content)
         self.word_count = len(no_punct.split())
@@ -220,6 +223,37 @@ class Entry(object):
         entry_dict['content'] = text
         entry_dict['input_path'] = in_path
         return cls.from_dict(entry_dict)
+
+    @classmethod
+    def from_string(cls, string, **kwargs):
+        # for thought:
+        #   * Markdown heading could look like YAML comment
+        #   * how can a user explicitly delineate a YAML vs MD section
+        #   * if no source_file, write out source_text to under_title.md
+        #     (or something)
+        parts = []
+        tokens = string.split('---\n')  # TODO change to regex with linestart, not line ending
+        was_yaml = True
+        for t in tokens:
+            try:
+                item = yaml.load(t)
+                if isinstance(item, str):
+                    raise StringLoaded()
+                was_yaml = True
+                if item:
+                    parts.append(item)
+            except (StringLoaded, yaml.YAMLError):
+                if not was_yaml:
+                    # if between two markdown parts, assume the divider is
+                    # part of content and put it back.
+                    parts[-1] = '---\n'.join([parts[-1], t])
+                    continue
+                else:
+                    was_yaml = False
+                    if t:
+                        parts.append(t)
+        header, parts = parts[0], parts[1:]
+        return cls.from_dict({})  # TODO
 
     def __repr__(self):
         cn = self.__class__.__name__
@@ -438,6 +472,7 @@ class Site(object):
         ret['tagline'] = site_config.get('tagline', '')
         ret['primary_links'] = self._get_links('site', 'primary_links')
         ret['secondary_links'] = self._get_links('site', 'secondary_links')
+        ret['charset'] = 'UTF-8'  # not really overridable
         ret['lang_code'] = site_config.get('lang_code', 'en')
         ret['copyright_notice'] = site_config.get('copyright', SITE_COPYRIGHT)
         ret['author_name'] = site_config.get('author', SITE_AUTHOR)
@@ -553,7 +588,7 @@ class Site(object):
 
         entries_path = self.paths['entries_path']
         entry_paths = []
-        for entry_path in iter_find_files(entries_path, ENTRY_PAT):
+        for entry_path in iter_find_files(entries_path, ENTRY_PATS):
             entry_paths.append(entry_path)
         for ep in entry_paths:
             with chert_log.info('entry load') as rec:
@@ -849,7 +884,7 @@ def _iter_changed_files(entries_path, theme_path, interval=0.5):
     mtimes = {}
     while True:
         changed = []
-        to_check = itertools.chain(iter_find_files(entries_path, ENTRY_PAT),
+        to_check = itertools.chain(iter_find_files(entries_path, ENTRY_PATS),
                                    iter_find_files(theme_path, LAYOUT_PAT))
         for path in to_check:
             try:
@@ -875,7 +910,6 @@ Metadata ideas:
 """
 
 _docstart_re = re.compile(b'^---\r?\n')
-
 
 def read_yaml_text(path):
     with open(path, 'rb') as fd:

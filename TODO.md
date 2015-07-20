@@ -29,3 +29,6 @@
 * Global links and abbreviations appended to the Markdown source of
   all posts before rendering (abbreviations powered by
   markdown.extensions.abbr)
+
+* Data file generation
+  * markdown posts should generate a data file with all the links
