@@ -94,6 +94,8 @@ RESERVED_PAGES = ('index', 'archive')
 
 _UNSET = object()
 
+_part_sep_re = re.compile(b'^---(?:\r\n?|\n)', flags=re.MULTILINE)
+
 
 chert_log = Logger('chert')
 # TODO: duration_s, duration_ms, duration_us
@@ -102,6 +104,31 @@ stderr_emt = StreamEmitter('stderr')
 stderr_sink = SensibleSink(formatter=stderr_fmt,
                            emitter=stderr_emt)
 chert_log.add_sink(stderr_sink)
+
+
+# Lithoxyl TODO: Sink which emits an extra record if a certain amount
+# of time has passed.
+
+class DevDebugSink(object):
+    # TODO: configurable max number of traceback signatures, after
+    #       which exit/ignore?
+
+    def __init__(self, reraise=False, post_mortem=False):
+        self.reraise = reraise
+        self.post_mortem = post_mortem
+
+    #def on_complete(self, record):
+    #    if record.name == 'entry load':
+    #        import pdb;pdb.set_trace()
+
+    def on_exception(self, record, exc_type, exc_obj, exc_tb):
+        if self.post_mortem:
+            import pdb; pdb.post_mortem()
+        if self.reraise:
+            raise exc_type, exc_obj, exc_tb
+
+
+chert_log.add_sink(DevDebugSink(post_mortem=True))
 
 
 _link_re = re.compile("((?P<attribute>src|href)=\"/)")
@@ -124,7 +151,7 @@ def _ppath(path):  # lithoxyl todo
 
 def rec_dec(record, inject_as=None):
     def func_wrapper(func):
-        def wrapped_func(*a, **kw):
+        def logged_func(*a, **kw):
             # kwargs: reraise + extras. message/raw_message/etc?
             # rewrite Callpoint of record to be the actual wrapped function?
             logger = record.logger
@@ -134,7 +161,7 @@ def rec_dec(record, inject_as=None):
                 kw[inject_as] = new_record
             with new_record:
                 return func(*a, **kw)
-        return wrapped_func
+        return logged_func
     return func_wrapper
 
 
@@ -161,14 +188,15 @@ class StringLoaded(Exception):
 
 
 class Entry(object):
-    def __init__(self, title=None, content=None, **kwargs):
-        self.title = title
-        self.entry_id = None or slugify(title)
-        self.content = content or ''
+    def __init__(self, headers=None, parts=None, **kwargs):
+        self.headers = headers or {}
+        self.headers.update(kwargs)
+        self.parts = parts
+
         self.source_text = kwargs.pop('source_text', None)
-        self.input_path = kwargs.pop('input_path', None)
-        self.metadata = kwargs
-        pub_date = self.metadata.get('publish_date')
+        self.source_path = kwargs.pop('source_path', None)
+
+        pub_date = self.headers.get('publish_date')
         if not pub_date:
             # None = not present = not published (see is_draft)
             pub_dt = DEFAULT_DATE
@@ -184,45 +212,57 @@ class Entry(object):
         # hash_content = (self.title + self.content).encode('utf-8')
         # self.entry_hash = hashlib.sha256(hash_content).hexdigest()
 
-        no_punct = _punct_re.sub('', self.content)
-        self.word_count = len(no_punct.split())
-        self.reading_time = self.word_count / READING_WPM
+        #no_punct = _punct_re.sub('', self.content)
+        #self.word_count = len(no_punct.split())
+        #self.reading_time = self.word_count / READING_WPM
 
-        self.summary = self.metadata.get('summary')
+        self.summary = self.headers.get('summary')
+
+    @property
+    def title(self):
+        return self.headers['title']
+
+    @property
+    def entry_id(self):
+        return self.headers.get('entry_id') or slugify(self.title)
 
     @property
     def is_special(self):
-        return bool(self.metadata.get('special'))
+        return bool(self.headers.get('special'))
 
     @property
     def is_draft(self):
-        ret = bool(self.metadata.get('draft'))
+        ret = bool(self.headers.get('draft'))
         ret = ret or self.publish_date is DEFAULT_DATE
         ret = ret or self.publish_date > datetime.now(LocalTZ)
         return ret
 
     @property
     def tags(self):
-        return self.metadata.setdefault('tags', [])
+        return self.headers.setdefault('tags', [])
 
     @property
     def layout(self):
-        return self.metadata.get('layout', DEFAULT_LAYOUT)
+        return self.headers.get('layout', DEFAULT_LAYOUT)
 
     @classmethod
-    def from_dict(cls, in_dict):
+    def from_dict(cls, in_dict, **kwargs):
+        in_dict.update(kwargs)
         ret = cls(**in_dict)
         return ret
 
     @classmethod
     def from_path(cls, in_path):
-        entry_dict, text = read_yaml_text(in_path)
-        for key in entry_dict.keys():
-            entry_dict[key.lower()] = entry_dict.pop(key)
-        entry_dict['source_text'] = logged_open(in_path).read().decode('utf-8')
-        entry_dict['content'] = text
-        entry_dict['input_path'] = in_path
-        return cls.from_dict(entry_dict)
+        with logged_open(in_path) as f:
+            bytestring = f.read()
+            ret = cls.from_string(bytestring,
+                                  source_path=in_path)
+        return ret
+
+        #entry_dict['source_text'] = logged_open(in_path).read().decode('utf-8')
+        #entry_dict['content'] = text
+        #entry_dict['input_path'] = in_path
+        #return cls.from_dict(entry_dict)
 
     @classmethod
     def from_string(cls, string, **kwargs):
@@ -231,18 +271,28 @@ class Entry(object):
         #   * how can a user explicitly delineate a YAML vs MD section
         #   * if no source_file, write out source_text to under_title.md
         #     (or something)
+        # TODO: support a list entry type that is just one YAML
         parts = []
-        tokens = string.split('---\n')  # TODO change to regex with linestart, not line ending
+        # TODO change to regex with linestart, not line ending
+        tokens = _part_sep_re.split(string)
         was_yaml = True
-        for t in tokens:
+        for i, t in enumerate(tokens):
+            if not t:
+                continue
             try:
                 item = yaml.load(t)
                 if isinstance(item, str):
+                    raise StringLoaded()
+                elif not isinstance(item, dict):
                     raise StringLoaded()
                 was_yaml = True
                 if item:
                     parts.append(item)
             except (StringLoaded, yaml.YAMLError):
+                if i == 0:
+                    raise ValueError('entry header section expected a valid '
+                                     'YAML dictionary')
+                t = t.decode('utf-8')  # TODO: YAML doesn't decode to utf-8?
                 if not was_yaml:
                     # if between two markdown parts, assume the divider is
                     # part of content and put it back.
@@ -252,8 +302,8 @@ class Entry(object):
                     was_yaml = False
                     if t:
                         parts.append(t)
-        header, parts = parts[0], parts[1:]
-        return cls.from_dict({})  # TODO
+        headers, parts = parts[0], parts[1:]
+        return cls.from_dict({'headers': headers, 'parts': parts}, **kwargs)
 
     def __repr__(self):
         cn = self.__class__.__name__
@@ -261,12 +311,11 @@ class Entry(object):
                 % (cn, self.title, self.word_count))
 
     def to_dict(self, with_links=False):
-        ret = dict(self.metadata,
-                   title=self.title,
-                   content=self.content,
+        ret = dict(headers=self.headers,
+                   parts=self.parts,
                    entry_id=self.entry_id)
-        ret['rendered_content'] = self.rendered_content
-        ret['inline_rendered_content'] = self.inline_rendered_content
+        ret['rendered_parts'] = self.rendered_parts
+        ret['inline_rendered_parts'] = self.inline_rendered_parts
         ret['summary'] = self.summary
         if with_links:
             ret['prev_entries'] = [pe.to_dict() for pe in self.prev_entries]
@@ -287,10 +336,14 @@ class Entry(object):
         return ret
 
     def _autosummarize(self):
-        if getattr(self, 'rendered_content', None) is None:
+        try:
+            summarizable_content = self.rendered_parts[0]
+        except (AttributeError, IndexError, TypeError):
+            summarizable_content = None
+        if summarizable_content is None:
             raise ValueError('expected self.rendered_content to be set.'
                              ' render the entry, then autosummarize.')
-        rendered_text = html2text(self.rendered_content)
+        rendered_text = html2text(summarizable_content)
         summary = ' '.join(rendered_text.split()[:28]) + '...'
         return summary
 
@@ -647,6 +700,15 @@ class Site(object):
 
         # TODO: assert necessary templates are present (entry.html, etc.)
 
+    def render_entry_content(self, entry):
+        pass
+
+    def render_entry_html(self, entry):
+        pass
+
+    def render_entry_data(self, entry):
+        pass
+
     @rec_dec(chert_log.critical('render site'))
     def render(self):
         self._call_custom_hook('pre_render')
@@ -654,12 +716,26 @@ class Site(object):
         mdr, imdr = self.md_renderer, self.inline_md_renderer
         site_info = self.get_site_info()
         canonical_domain = site_info['canonical_domain']
-        def render_content(entry):
-            entry.rendered_content = mdr.convert(entry.content)
+
+        def render_string(string):
+            rendered_content = mdr.convert(string)
             mdr.reset()
-            entry.inline_rendered_content = canonicalize_links(imdr.convert(entry.content),
-                                                               canonical_domain)
+            inline_rendered_content = canonicalize_links(string,
+                                                         canonical_domain)
             imdr.reset()
+            return rendered_content, inline_rendered_content
+
+        def render_content(entry):
+            rp_list = entry.rendered_parts = []
+            irp_list = entry.inline_rendered_parts = []
+            for part in entry.parts:
+                if isinstance(part, basestring):
+                    rc, irc = render_string(part)
+                    rp_list.append(rc)
+                    irp_list.append(irc)
+                else:
+                    rp_list.append(repr(part))
+                    irp_list.append(repr(part))
 
             if not entry.summary:
                 entry.summary = entry._autosummarize()
@@ -908,8 +984,7 @@ Metadata ideas:
   - Source
   - Via
 """
-
-_docstart_re = re.compile(b'^---\r?\n')
+_docstart_re = re.compile(b'^---(\r\n?|\n)')
 
 def read_yaml_text(path):
     with open(path, 'rb') as fd:
@@ -962,6 +1037,17 @@ def get_argparser():
                       help='clean Chert output site directory')
 
     return prs
+
+
+class ChertRenderer(object):
+    # TODO?
+    def __init__(self, entries, site_info):
+        self.entries = entries
+        self.site_info = site_info
+        self.canonical_domain = site['canonical_domain']
+
+    def render_content(self):
+        pass
 
 
 def main():
