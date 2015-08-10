@@ -29,7 +29,7 @@ from boltons.fileutils import mkdir_p, copytree, iter_find_files
 from boltons.debugutils import pdb_on_signal
 from lithoxyl import Logger, SensibleSink, Formatter, StreamEmitter
 from ashes import AshesEnv, Template
-from dateutil.parser import parse
+from dateutil.parser import parse as parse_date
 from markdown.extensions.toc import TocExtension
 from markdown.extensions.codehilite import CodeHiliteExtension
 
@@ -128,7 +128,7 @@ class DevDebugSink(object):
             raise exc_type, exc_obj, exc_tb
 
 
-chert_log.add_sink(DevDebugSink(post_mortem=True))
+chert_log.add_sink(DevDebugSink(post_mortem=os.getenv('CHERT_PDB')))
 
 
 _link_re = re.compile("((?P<attribute>src|href)=\"/)")
@@ -149,14 +149,15 @@ def _ppath(path):  # lithoxyl todo
     return rel_path
 
 
-def rec_dec(record, inject_as=None):
+def rec_dec(record, inject_as=None, **rec_kwargs):
+    if inject_as and not isinstance(inject_as, str):
+        raise TypeError('inspect_as expected string, not: %r' % inject_as)
     def func_wrapper(func):
         def logged_func(*a, **kw):
             # kwargs: reraise + extras. message/raw_message/etc?
             # rewrite Callpoint of record to be the actual wrapped function?
             logger = record.logger
-            rec_func = getattr(logger, record.level.name)
-            new_record = rec_func(record.name)
+            new_record = logger.record(record.name, record.level, **rec_kwargs)
             if inject_as:
                 kw[inject_as] = new_record
             with new_record:
@@ -201,8 +202,9 @@ class Entry(object):
             # None = not present = not published (see is_draft)
             pub_dt = DEFAULT_DATE
         else:
-            pub_dt = parse(pub_date)
+            pub_dt = parse_date(pub_date)
             if not pub_dt.tzinfo:
+                # TODO: allow timezone setting in chert config
                 pub_dt = pub_dt.replace(tzinfo=LocalTZ)
         self.publish_date = pub_dt
 
@@ -217,6 +219,7 @@ class Entry(object):
         #self.reading_time = self.word_count / READING_WPM
 
         self.summary = self.headers.get('summary')
+        self._load_parts()
 
     @property
     def title(self):
@@ -264,6 +267,98 @@ class Entry(object):
         #entry_dict['input_path'] = in_path
         #return cls.from_dict(entry_dict)
 
+    def _load_parts(self):
+        """
+        Loads the parts to a standardized format with one dictionary per
+        part.
+        """
+        headers = self.headers
+        self.loaded_parts = lps = []
+        ordinal_tmpl = headers.get('ordinal_tmpl') or ''
+        date_tmpl = headers.get('date_tmpl') or ''
+        # TODO: test the ordinal template?
+
+        # TODO: validate field types for duplicates, etc. E.g.:
+        #  * multiple title fields
+        #  * multiple links and attributes are ok though
+        # TODO: are there other special attr types besides "link" and
+        # "image" (rating?)
+        field_type_map = headers.get('field_key_map') or {}
+        field_title_map = headers.get('field_title_map') or {}
+        builtin_fields = set(['content', 'title', 'date', 'summary', 'image'])
+        # i = data index, ci = consecutive data index, pi = part index
+        # i and pi always increase. ci resets at every text element.
+        # text parts have no data indices (i and ci).
+        i, ci = 1, 1
+        for pi, part in enumerate(self.parts, start=1):
+            cur = {}
+            cur['part_idx'] = pi
+            if isinstance(part, basestring):
+                cur['content'] = part
+                ci = 1
+                continue
+
+            def is_link(field_name):
+                field_type = field_type_map.get(field_name, field_name)
+                if field_type == 'link':
+                    return True
+                value = part.get(field_name, '')
+                # TODO: use a real check (hematite.url?)
+                if isinstance(value, str) and '://' in value and ' ' not in value:
+                    return True
+                return False
+
+            def is_builtin(field_name):
+                field_type = field_type_map.get(field_name, field_name)
+                return field_type in builtin_fields
+
+            def get_value(field_name, default=None):
+                # TODO: field type or field key?
+                field_type = field_type_map.get(field_name, field_name)
+                return part.get(field_type, default)
+
+            def get_title(field_name):
+                # Title Case default (or something)
+                return field_title_map.get(field_name, field_name.title())
+
+            cur['data_idx'] = i
+            i += 1
+            cur['data_consec_idx'] = ci
+            ci += 1
+            cur['ordinal_text'] = ordinal_tmpl.format(i=i, ci=ci)
+            cur['summary'] = ''  # TODO
+            cur['title'] = get_value('title', '')  # TODO: no title = error?
+            cur['title_slug'] = slugify(cur['title'])
+
+            dt = get_value('date')
+            if dt:
+                if not dt.tzinfo:
+                    dt = dt.replace(tzinfo=LocalTZ)
+                dt_dict = {'year': dt.year}  # TODO
+            else:
+                dt_dict = {}
+            cur['date_obj'] = dt_dict
+            # TODO: use Templette or somesuch
+            cur['date_text'] = date_tmpl.format(**dt_dict)
+
+            cur['content'] = get_value('content')
+            cur['tags'] = get_value('tags', [])
+
+            cur['attributes'] = attrs = []
+            for key, value in part.items():
+                if is_builtin(key):
+                    continue
+                # TODO: multiple links or media for a single field
+                # e.g., multiple authors or multiple angles
+                cur_attr = {'key': key, 'value': value}
+                cur_attr['title'] = get_title(key)
+                if is_link(key):
+                    cur_attr['is_link'] = True
+                attrs.append(cur_attr)
+
+            lps.append(cur)
+        return
+
     @classmethod
     def from_string(cls, string, **kwargs):
         # for thought:
@@ -279,6 +374,7 @@ class Entry(object):
         for i, t in enumerate(tokens):
             if not t:
                 continue
+            # TODO: pull out part metadata:  "#<!--{}-->"
             try:
                 item = yaml.load(t)
                 if isinstance(item, str):
@@ -725,7 +821,7 @@ class Site(object):
             imdr.reset()
             return rendered_content, inline_rendered_content
 
-        def render_content(entry):
+        def render_parts(entry):
             rp_list = entry.rendered_parts = []
             irp_list = entry.inline_rendered_parts = []
             for part in entry.parts:
@@ -734,11 +830,13 @@ class Site(object):
                     rp_list.append(rc)
                     irp_list.append(irc)
                 else:
+                    # TODO: recurse
                     rp_list.append(repr(part))
                     irp_list.append(repr(part))
 
             if not entry.summary:
                 entry.summary = entry._autosummarize()
+            return
 
         def render_html(entry, with_links=False):
             tmpl_name = entry.layout + LAYOUT_EXT
@@ -749,11 +847,11 @@ class Site(object):
             return
 
         for entry in entries:
-            render_content(entry)
+            render_parts(entry)
         for entry in self.draft_entries:
-            render_content(entry)
+            render_parts(entry)
         for entry in self.special_entries:
-            render_content(entry)
+            render_parts(entry)
 
         for entry in entries:
             render_html(entry, with_links=True)
@@ -796,8 +894,10 @@ class Site(object):
 
             with logged_open(html_output_path, 'w') as f:
                 f.write(entry.rendered_html.encode('utf-8'))
-            with logged_open(src_output_path, 'w') as f:
-                f.write(entry.source_text.encode('utf-8'))
+
+            # TODO: copy file
+            #with logged_open(src_output_path, 'w') as f:
+            #    f.write(entry.source_text.encode('utf-8'))
 
         for entry in self.entries:
             export_entry(entry)
