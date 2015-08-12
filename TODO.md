@@ -32,3 +32,5 @@
 
 * Data file generation
   * markdown posts should generate a data file with all the links
+
+* "theme" to "themes" with theme name specified in config
