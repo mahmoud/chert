@@ -60,7 +60,7 @@ BASE_MD_EXTENSIONS = ['markdown.extensions.def_list',
                       'markdown.extensions.fenced_code']
 _HILITE = CodeHiliteExtension()
 _TOC_EXTENSION = TocExtension(title='Contents', anchorlink=True, baselevel=2)
-# baselevel is actually a really useful feature regardless of TOC usage
+# baselevel is actually really useful for Chert regardless of TOC usage
 MD_EXTENSIONS = BASE_MD_EXTENSIONS + [_HILITE, _TOC_EXTENSION]
 _HILITE_INLINE = CodeHiliteExtension(noclasses=True,
                                      pygments_style='emacs')
@@ -188,6 +188,137 @@ class StringLoaded(Exception):
     pass
 
 
+class Part(dict):
+    def __init__(self, raw_part, entry, part_idx):
+        self.raw_part = raw_part
+        self.entry = entry
+        self['part_idx'] = part_idx
+
+
+class TextPart(Part):
+    def __init__(self, *a, **kw):
+        super(TextPart, self).__init__(*a, **kw)
+        self['content'] = self.raw_part
+
+
+class DataPart(Part):
+    # TODO: test the ordinal template?
+    # TODO: are there other special attr types besides "link",
+    # "image", "date" (rating?)
+
+    builtin_roles = set(['content', 'title', 'date', 'summary', 'image'])
+
+    def __init__(self, raw_part, entry, part_idx, data_idx, data_consec_idx):
+        super(DataPart, self).__init__(raw_part, entry, part_idx)
+        self['data_idx'] = data_idx
+        self['data_consec_idx'] = data_consec_idx
+        ordinal_tmpl = self.entry.headers.get('ordinal_tmpl') or ''
+        self['ordinal_text'] = ordinal_tmpl.format(i=self['data_idx'],
+                                                   ci=self['data_consec_idx'])
+        self['summary'] = self.get_builtin_value('summary')
+        self['title'] = self.get_builtin_value('title', '')
+
+        self['title_slug'] = slugify(self['title'])
+        self['content'] = self.get_builtin_value('content')
+        self['tags'] = self.get_builtin_value('tags', [])
+        self.load_date()
+        self.load_attrs()
+
+    def load_attrs(self):
+        self['attrs'] = attrs = []
+        for key, value in self.raw_part.items():
+            if self.is_builtin_field(key):
+                continue
+            # TODO: multiple links or media for a single field
+            # e.g., multiple authors or multiple angles
+            cur_attr = {'key': key}
+            cur_attr['title'] = self.get_field_label(key)
+            cur_attr['type'] = self.get_field_type(key)
+            fmt_func = getattr(self, '_format_' + cur_attr['type'])
+            cur_attr['value'] = fmt_func(key, value)
+            attrs.append(cur_attr)
+        return
+
+    def load_date(self):
+        dt = self.get_builtin_value('date')
+        if dt:
+            if not dt.tzinfo:
+                dt = dt.replace(tzinfo=LocalTZ)
+            dt_dict = {'year': dt.year}  # TODO
+        else:
+            dt_dict = {}
+        self['date_obj'] = dt_dict
+
+        date_tmpl = self.entry.headers.get('date_tmpl') or ''
+        # TODO: use Templette or somesuch
+        self['date_text'] = date_tmpl.format(**dt_dict)
+
+    def _format_default(self, field_name, value):
+        return value
+
+    def _format_default_list(self, field_name, value):
+        return [self._format_default(field_name, v) for v in value]
+
+    def _format_link(self, field_name, value):
+        if isinstance(value, basestring):
+            return {'text': self.get_field_label(field_name),
+                    'href': value,
+                    'tip': None}
+        return value
+
+    def _format_link_list(self, field_name, value):
+        return [self._format_link(field_name, v) for v in value]
+
+    # TODO: *_format_image_*
+
+    def is_builtin_field(self, field_name):
+        builtins = set(self.entry.field_role_map.values()) | self.builtin_roles
+        return field_name in builtins
+
+    def get_builtin_value(self, builtin_name, default=None):
+        field_name = self.entry.field_role_map.get(builtin_name, builtin_name)
+        return self.raw_part.get(field_name, default)
+
+    def get_field_label(self, field_name):
+        try:
+            return self.entry.field_label_map[field_name]
+        except KeyError:
+            return field_name.replace('_', ' ').title()
+
+    def get_field_type(self, field_name):
+        # TODO: to ensure consistent type detection, field types
+        # could/should be determined at Entry load_mappings time.
+        ret = 'default'
+        value = self.raw_part[field_name]
+        if not value:
+            # falsy values should all be omitted in rendering anyways
+            return ret
+        is_list = isinstance(value, list)
+        if is_list:
+            value = value[0]
+        if self._is_link(value):
+            ret = 'link'
+        elif self._is_image(value):
+            ret = 'image'
+
+        if is_list:
+            ret += '_list'
+        return ret
+
+    def _is_image(self, value):
+        # TODO
+        if isinstance(value, basestring) and self._is_link(value):
+            if value.endwith('jpg') or value.endswith('png'):
+                return True
+        return False
+
+    def _is_link(self, value):
+        # TODO: use a real check (hematite.url?)
+        if isinstance(value, str) and '://' in value and ' ' not in value:
+            return True
+        return False
+
+
 class Entry(object):
     def __init__(self, headers=None, parts=None, **kwargs):
         self.headers = headers or {}
@@ -208,7 +339,7 @@ class Entry(object):
                 pub_dt = pub_dt.replace(tzinfo=LocalTZ)
         self.publish_date = pub_dt
 
-        self.edit_list = []  # TODO
+        self.edit_list = []  # TODO. also, "changelog"?
         self.last_edit_date = None  # TODO
 
         # hash_content = (self.title + self.content).encode('utf-8')
@@ -219,6 +350,7 @@ class Entry(object):
         #self.reading_time = self.word_count / READING_WPM
 
         self.summary = self.headers.get('summary')
+        self._load_mappings()
         self._load_parts()
 
     @property
@@ -267,95 +399,41 @@ class Entry(object):
         #entry_dict['input_path'] = in_path
         #return cls.from_dict(entry_dict)
 
-    def _load_parts(self):
-        """
-        Loads the parts to a standardized format with one dictionary per
-        part.
-        """
-        headers = self.headers
-        self.loaded_parts = lps = []
-        ordinal_tmpl = headers.get('ordinal_tmpl') or ''
-        date_tmpl = headers.get('date_tmpl') or ''
-        # TODO: test the ordinal template?
+    def _load_mappings(self):
+        # a little like role->field map, but this strikes me as a more
+        # intuitive name for users.
+        self.field_role_map = frm = self.headers.get('field_role_map') or {}
+        # self.field_role_map = frm = dict([(v, k) for k, v in _frm.items()])
+        # TODO: scan over data and generate a uniform type map
+        self.field_type_map = ftm = self.headers.get('field_type_map') or {}
+        self.field_label_map = flm = self.headers.get('field_label_map') or {}
 
-        # TODO: validate field types for duplicates, etc. E.g.:
-        #  * multiple title fields
-        #  * multiple links and attributes are ok though
-        # TODO: are there other special attr types besides "link" and
-        # "image" (rating?)
-        field_type_map = headers.get('field_key_map') or {}
-        field_title_map = headers.get('field_title_map') or {}
-        builtin_fields = set(['content', 'title', 'date', 'summary', 'image'])
+        # Validation
+        frm, ftm, flm
+        # TODO: etc.
+
+    def _load_parts(self):
+        """Loads each part to a standardized dictionary format suitable for
+        rendering.
+        """
+        self.loaded_parts = lps = []
+
         # i = data index, ci = consecutive data index, pi = part index
         # i and pi always increase. ci resets at every text element.
         # text parts have no data indices (i and ci).
-        i, ci = 1, 1
+        di, dci = 1, 1
         for pi, part in enumerate(self.parts, start=1):
             cur = {}
             cur['part_idx'] = pi
             if isinstance(part, basestring):
-                cur['content'] = part
-                ci = 1
-                continue
-
-            def is_link(field_name):
-                field_type = field_type_map.get(field_name, field_name)
-                if field_type == 'link':
-                    return True
-                value = part.get(field_name, '')
-                # TODO: use a real check (hematite.url?)
-                if isinstance(value, str) and '://' in value and ' ' not in value:
-                    return True
-                return False
-
-            def is_builtin(field_name):
-                field_type = field_type_map.get(field_name, field_name)
-                return field_type in builtin_fields
-
-            def get_value(field_name, default=None):
-                # TODO: field type or field key?
-                field_type = field_type_map.get(field_name, field_name)
-                return part.get(field_type, default)
-
-            def get_title(field_name):
-                # Title Case default (or something)
-                return field_title_map.get(field_name, field_name.title())
-
-            cur['data_idx'] = i
-            i += 1
-            cur['data_consec_idx'] = ci
-            ci += 1
-            cur['ordinal_text'] = ordinal_tmpl.format(i=i, ci=ci)
-            cur['summary'] = ''  # TODO
-            cur['title'] = get_value('title', '')  # TODO: no title = error?
-            cur['title_slug'] = slugify(cur['title'])
-
-            dt = get_value('date')
-            if dt:
-                if not dt.tzinfo:
-                    dt = dt.replace(tzinfo=LocalTZ)
-                dt_dict = {'year': dt.year}  # TODO
+                cur = TextPart(part, self, pi)
+                dci = 1
+            elif isinstance(part, dict):
+                cur = DataPart(part, self, pi, di, dci)
+                di += 1
+                dci += 1
             else:
-                dt_dict = {}
-            cur['date_obj'] = dt_dict
-            # TODO: use Templette or somesuch
-            cur['date_text'] = date_tmpl.format(**dt_dict)
-
-            cur['content'] = get_value('content')
-            cur['tags'] = get_value('tags', [])
-
-            cur['attributes'] = attrs = []
-            for key, value in part.items():
-                if is_builtin(key):
-                    continue
-                # TODO: multiple links or media for a single field
-                # e.g., multiple authors or multiple angles
-                cur_attr = {'key': key, 'value': value}
-                cur_attr['title'] = get_title(key)
-                if is_link(key):
-                    cur_attr['is_link'] = True
-                attrs.append(cur_attr)
-
+                raise ValueError('unexpected part type: %r' % part)
             lps.append(cur)
         return
 
