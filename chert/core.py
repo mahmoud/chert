@@ -35,6 +35,8 @@ from markdown.extensions.codehilite import CodeHiliteExtension
 
 from hematite.url import URL
 
+__version__ = '0.0.1dev'
+
 DEBUG = False
 if DEBUG:
     pdb_on_signal()
@@ -300,7 +302,7 @@ class DataPart(Part):
             ret = 'link'
         elif self._is_image(value):
             ret = 'image'
-
+        # TODO: detect date
         if is_list:
             ret += '_list'
         return ret
@@ -836,7 +838,8 @@ class Site(object):
 
         # Sorting the EntryLists
         self.entries.sort()
-        self.draft_entries.sort()  # sorting drafts/special pages does do much
+        # sorting drafts/special pages doesn't do much
+        self.draft_entries.sort()
         self.special_entries.sort()
 
         self._rebuild_tag_map()
@@ -1205,6 +1208,8 @@ def get_argparser():
     init_prs.add_argument('target_dir',
                           help='path of a non-existent directory to'
                           ' create a new Chert site')
+    subprs.add_parser('version',
+                      help='display the version and other metadata')
     subprs.add_parser('serve',
                       help='work on a Chert site using the local server')
     subprs.add_parser('render',
@@ -1239,6 +1244,9 @@ def main():
         ch = Site(os.getcwd())
         ch.process()
         ch.publish()
+    elif action == 'version':
+        print 'chert version %s' % __version__
+        print '  located at: %s' % os.path.abspath(os.path.dirname(__file__))
     elif action == 'render':
         ch = Site(os.getcwd())
         ch.process()

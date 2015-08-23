@@ -2,10 +2,9 @@
 """
 
 from setuptools import setup
-
+from chert import __version__
 
 __author__ = 'Mahmoud Hashemi'
-__version__ = '0.1.0dev'
 __contact__ = 'mahmoud@hatnote.com'
 __url__ = 'https://github.com/mahmoud/chert'
 __license__ = 'BSD'
