@@ -17,6 +17,9 @@ site:
   # remove if you won't be using analytics
   analytics_code: UA-63522904-3
 
+theme:
+  name: sedimental
+
 dev:
   server_host: 0.0.0.0
   server_port: 8080

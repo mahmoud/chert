@@ -606,17 +606,28 @@ class Site(object):
         set_path('input_path', input_path)
         set_path('config_path', kw.pop('config_path', None), 'config.yaml')
         set_path('entries_path', kw.pop('entries_path', None), 'entries')
-        set_path('theme_path', kw.pop('theme_path', None), 'theme')
+        set_path('themes_path', kw.pop('themes_path', None), 'themes')
         set_path('uploads_path', kw.pop('uploads_path', None), 'uploads',
                  required=False)
         set_path('output_path', kw.pop('output_path', None), 'site',
                  required=False)
+        self.reload_config()
         self.reset()
         chert_log.debug('init site').success()
         self.dev_mode = kw.pop('dev_mode', False)
         if kw:
             raise TypeError('unexpected keyword arguments: %r' % kw)
         return
+
+    def reload_config(self, **kw):
+        # TODO: take optional kwarg
+        self.config = yaml.load(logged_open(self.paths['config_path']))
+
+        # set theme
+        with chert_log.debug('setting theme'):
+            theme_name = self.get_config('theme', 'name')
+            theme_path = os.path.join(self.themes_path, theme_name)
+            self._set_path('theme_path', theme_path)
 
     def reset(self):
         """Called on __init__ and on reload before processing. Does not reset
@@ -625,9 +636,6 @@ class Site(object):
         self.draft_entries = self._entry_list_type()
         self.special_entries = self._entry_list_type()
         self._rebuild_tag_map()
-
-        # TODO: take optional kwarg
-        self.config = yaml.load(logged_open(self.paths['config_path']))
 
         self.last_load = None
 
@@ -661,7 +669,7 @@ class Site(object):
                                        % (name, self.paths[name]))
             rec.success('set {path_name} path to {path_val}',
                         path_val=self.paths[name])
-            return
+        return
 
     def _load_atom_template(self):
         default_atom_tmpl_path = pjoin(CUR_PATH, FEED_FILENAME)
@@ -761,6 +769,10 @@ class Site(object):
         return self.paths['entries_path']
 
     @property
+    def themes_path(self):
+        return self.paths['themes_path']
+
+    @property
     def theme_path(self):
         return self.paths['theme_path']
 
@@ -774,6 +786,7 @@ class Site(object):
 
     def process(self):
         if self.last_load:
+            self.reload_config()
             self.reset()
         self.load()
         self.validate()
@@ -1137,6 +1150,7 @@ def to_timestamp(dt_obj, to_utc=False):
     return dt_obj.strftime('%Y-%m-%dT%H:%M:%S%z')
 
 
+# TODO: also monitor config path
 def _iter_changed_files(entries_path, theme_path, interval=0.5):
     mtimes = {}
     while True:
