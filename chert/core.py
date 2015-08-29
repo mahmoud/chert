@@ -4,6 +4,7 @@ import io
 import re
 import os
 import imp
+import json
 import time
 import string
 import shutil
@@ -34,6 +35,8 @@ from markdown.extensions.toc import TocExtension
 from markdown.extensions.codehilite import CodeHiliteExtension
 
 from hematite.url import URL
+
+from chert.utils import dt_to_dict
 
 __version__ = '0.0.1dev'
 
@@ -214,7 +217,7 @@ class DataPart(Part):
         super(DataPart, self).__init__(raw_part, entry, part_idx)
         self['data_idx'] = data_idx
         self['data_consec_idx'] = data_consec_idx
-        ordinal_tmpl = self.entry.headers.get('ordinal_tmpl') or ''
+        ordinal_tmpl = self.entry.headers.get('ordinal_format') or ''
         self['ordinal_text'] = ordinal_tmpl.format(i=self['data_idx'],
                                                    ci=self['data_consec_idx'])
         self['summary'] = self.get_builtin_value('summary')
@@ -239,14 +242,26 @@ class DataPart(Part):
             fmt_func = getattr(self, '_format_' + cur_attr['type'])
             cur_attr['value'] = fmt_func(key, value)
             attrs.append(cur_attr)
+
+        self['links'] = []
+        self['images'] = []
+        self['dates'] = []
+        for attr in attrs:
+            attr_type = attr['type']
+            if attr_type in ('link', 'date', 'image'):
+                self[attr_type + 's'].append(attr)
         return
 
     def load_date(self):
+        # TODO: allow some degree of control over what attribute
+        # represents the primary date (because parts can have multiple
+        # types of dates. e.g., premiere_date and cancellation_date)
         dt = self.get_builtin_value('date')
         if dt:
             if not dt.tzinfo:
+                # TODO: how would a part specify a date
                 dt = dt.replace(tzinfo=LocalTZ)
-            dt_dict = {'year': dt.year}  # TODO
+            dt_dict = dt_to_dict(dt)
         else:
             dt_dict = {}
         self['date_obj'] = dt_dict
@@ -456,7 +471,7 @@ class Entry(object):
                 continue
             # TODO: pull out part metadata:  "#<!--{}-->"
             try:
-                item = yaml.load(t)
+                item = omd_load(t)
                 if isinstance(item, str):
                     raise StringLoaded()
                 elif not isinstance(item, dict):
@@ -490,7 +505,14 @@ class Entry(object):
         ret = dict(headers=self.headers,
                    parts=self.parts,
                    entry_id=self.entry_id)
-        ret['rendered_parts'] = self.rendered_parts
+        try:
+            ret['rendered_parts'] = self.rendered_parts
+            ret['rendered_md'] = self.rendered_md
+            ret['rendered_md_html'] = self.rendered_md_html
+            ret['inline_rendered_md_html'] = self.inline_rendered_md_html
+        except AttributeError:
+            pass
+        ret['loaded_parts'] = self.loaded_parts
         ret['inline_rendered_parts'] = self.inline_rendered_parts
         ret['summary'] = self.summary
         if with_links:
@@ -827,6 +849,11 @@ class Site(object):
         self._call_custom_hook('pre_load')
         self.html_renderer = AshesEnv(paths=[self.theme_path])
         self.html_renderer.load_all()
+        self.content_renderer = AshesEnv(paths=[self.theme_path],
+                                         exts=['md'],
+                                         keep_whitespace=False)
+        self.content_renderer.autoescape_filter = ''
+        self.content_renderer.load_all()
 
         entries_path = self.paths['entries_path']
         entry_paths = []
@@ -890,15 +917,6 @@ class Site(object):
 
         # TODO: assert necessary templates are present (entry.html, etc.)
 
-    def render_entry_content(self, entry):
-        pass
-
-    def render_entry_html(self, entry):
-        pass
-
-    def render_entry_data(self, entry):
-        pass
-
     @rec_dec(chert_log.critical('render site'))
     def render(self):
         self._call_custom_hook('pre_render')
@@ -930,6 +948,13 @@ class Site(object):
 
             if not entry.summary:
                 entry.summary = entry._autosummarize()
+
+            tmpl_name = entry.layout + '.md'
+            render_ctx = {'entry': entry.to_dict(with_links=False),
+                          'site': site_info}
+            rendered_md = self.content_renderer.render(tmpl_name, render_ctx)
+            entry.rendered_md = rendered_md
+            entry.rendered_md_html, entry.inline_rendered_md_html = render_string(rendered_md)
             return
 
         def render_html(entry, with_links=False):
@@ -938,6 +963,8 @@ class Site(object):
                           'site': site_info}
             rendered_html = self.html_renderer.render(tmpl_name, render_ctx)
             entry.rendered_html = rendered_html
+            if entry.title == 'Podcasts':
+                import pdb;pdb.set_trace()
             return
 
         for entry in entries:
@@ -983,11 +1010,19 @@ class Site(object):
         def export_entry(entry):
             entry_src_fn = entry.entry_id + EXPORT_SRC_EXT
             entry_html_fn = entry.entry_id + EXPORT_HTML_EXT
+            entry_gen_md_fn = entry.entry_id + '.gen.md'
+            entry_data_fn = entry.entry_id + '.json'
             src_output_path = pjoin(output_path, entry_src_fn)
             html_output_path = pjoin(output_path, entry_html_fn)
+            data_output_path = pjoin(output_path, entry_data_fn)
+            gen_md_output_path = pjoin(output_path, entry_gen_md_fn)
 
             with logged_open(html_output_path, 'w') as f:
                 f.write(entry.rendered_html.encode('utf-8'))
+            with logged_open(gen_md_output_path, 'w') as f:
+                f.write(entry.rendered_md.encode('utf-8'))
+            with logged_open(data_output_path, 'w') as f:
+                json.dump(entry.loaded_parts, f, indent=2, sort_keys=True)
 
             # TODO: copy file
             #with logged_open(src_output_path, 'w') as f:
@@ -1067,6 +1102,8 @@ class Site(object):
                 if not self.path.startswith('/'):
                     self.path = '/' + self.path
                 return SimpleHTTPRequestHandler.send_head(self)
+        Handler.extensions_map.update({'.md': 'text/plain',
+                                       '.json': 'application/json'})
 
         server = HTTPServer((host, port), Handler)
         serving = False
@@ -1181,25 +1218,19 @@ Metadata ideas:
 """
 _docstart_re = re.compile(b'^---(\r\n?|\n)')
 
-def read_yaml_text(path):
-    with open(path, 'rb') as fd:
-        if fd.read(3) != b'---':
-            raise ValueError("file did not start with '---': %r" % path)
-        lines = []
-        while True:
-            line = fd.readline()
-            if _docstart_re.match(line):
-                break
-            elif line == b'':
-                return None
-            lines.append(line)
-        yaml_bio = io.BytesIO(b''.join(lines))
-        yaml_bio.name = path
-        yaml_dict = yaml.load(yaml_bio)
-        if not yaml_dict:
-            yaml_dict = {}
-        text_content = fd.read().decode(ENTRY_ENCODING)
-        return yaml_dict, text_content
+
+def omd_load(stream, Loader=yaml.Loader, object_pairs_hook=OMD):
+    class OrderedLoader(Loader):
+        pass
+
+    def construct_mapping(loader, node):
+        loader.flatten_mapping(node)
+        return object_pairs_hook(loader.construct_pairs(node))
+
+    OrderedLoader.add_constructor(
+        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+        construct_mapping)
+    return yaml.load(stream, OrderedLoader)
 
 
 def delete_dir_contents(path):
