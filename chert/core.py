@@ -963,8 +963,6 @@ class Site(object):
                           'site': site_info}
             rendered_html = self.html_renderer.render(tmpl_name, render_ctx)
             entry.rendered_html = rendered_html
-            if entry.title == 'Podcasts':
-                import pdb;pdb.set_trace()
             return
 
         for entry in entries:

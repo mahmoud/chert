@@ -33,4 +33,5 @@
 * Data file generation
   * markdown posts should generate a data file with all the links
 
-* "theme" to "themes" with theme name specified in config
+* chert operations should traverse up the parent tree looking for a
+  config (so that chert serve works just as well as git status)
