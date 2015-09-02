@@ -1,7 +1,20 @@
-ashes==0.7.4
+-e git+git@github.com:mahmoud/ashes.git@029eb56da35ad71d505442575dba782f6b912b89#egg=ashes-master
 boltons==0.6.3
+cov-core==1.7
+coverage==3.7.1
+docopt==0.6.2
+hematite==0.0.2
+html5lib==0.999999
+-e git+git@github.com:mahmoud/lithoxyl.git@8d4fbf785e1a64dcee916ea94b5c337e6f6fd73b#egg=lithoxyl-master
 Markdown==2.6.2
+pep8==1.4.6
+py==1.4.20
+pyflakes==0.7.3
 Pygments==1.6
+pytest==2.5.2
+pytest-cov==1.6
 python-dateutil==2.2
 PyYAML==3.11
 six==1.8.0
+tox==1.9.2
+virtualenv==12.1.1
