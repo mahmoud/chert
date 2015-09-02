@@ -36,6 +36,7 @@ from markdown.extensions.codehilite import CodeHiliteExtension
 
 from hematite.url import URL
 
+from chert.toc import add_toc
 from chert.utils import dt_to_dict
 
 __version__ = '0.0.1dev'
@@ -66,7 +67,7 @@ BASE_MD_EXTENSIONS = ['markdown.extensions.def_list',
 _HILITE = CodeHiliteExtension()
 _TOC_EXTENSION = TocExtension(title='Contents', anchorlink=True, baselevel=2)
 # baselevel is actually really useful for Chert regardless of TOC usage
-MD_EXTENSIONS = BASE_MD_EXTENSIONS + [_HILITE, _TOC_EXTENSION]
+MD_EXTENSIONS = BASE_MD_EXTENSIONS + [_HILITE]  # , _TOC_EXTENSION]
 _HILITE_INLINE = CodeHiliteExtension(noclasses=True,
                                      pygments_style='emacs')
 INLINE_MD_EXTENSIONS = BASE_MD_EXTENSIONS + [_HILITE_INLINE]
@@ -74,8 +75,10 @@ INLINE_MD_EXTENSIONS = BASE_MD_EXTENSIONS + [_HILITE_INLINE]
 
 ENTRY_ENCODING = 'utf-8'
 ENTRY_PATS = ['*.md', '*.yaml']
-LAYOUT_EXT = '.html'
-LAYOUT_PAT = '*' + LAYOUT_EXT
+HTML_LAYOUT_EXT = '.html'
+HTML_LAYOUT_PAT = '*' + HTML_LAYOUT_EXT
+MD_LAYOUT_EXT = '.md'
+MD_LAYOUT_PAT = '*' + MD_LAYOUT_EXT
 
 FEED_FILENAME = 'atom.xml'
 EXPORT_SRC_EXT = '.md'
@@ -505,16 +508,13 @@ class Entry(object):
         ret = dict(headers=self.headers,
                    parts=self.parts,
                    entry_id=self.entry_id)
-        try:
-            ret['rendered_parts'] = self.rendered_parts
-            ret['rendered_md'] = self.rendered_md
-            ret['rendered_md_html'] = self.rendered_md_html
-            ret['inline_rendered_md_html'] = self.inline_rendered_md_html
-        except AttributeError:
-            pass
-        ret['loaded_parts'] = self.loaded_parts
-        ret['inline_rendered_parts'] = self.inline_rendered_parts
-        ret['summary'] = self.summary
+
+        attrs = ('rendered_md', 'rendered_html',
+                 'inline_rendered_html', 'loaded_parts', 'summary',
+                 'content_html', 'content_ihtml')
+        for attr in attrs:
+            ret[attr] = getattr(self, attr, None)
+
         if with_links:
             ret['prev_entries'] = [pe.to_dict() for pe in self.prev_entries]
             ret['next_entries'] = [ne.to_dict() for ne in self.next_entries]
@@ -535,7 +535,7 @@ class Entry(object):
 
     def _autosummarize(self):
         try:
-            summarizable_content = self.rendered_parts[0]
+            summarizable_content = 'TODO'
         except (AttributeError, IndexError, TypeError):
             summarizable_content = None
         if summarizable_content is None:
@@ -584,7 +584,7 @@ class EntryList(object):
         self.rendered_feed = site_obj.atom_template.render(feed_render_ctx)
 
         tag_archive_layout = site_obj.get_config('site', 'tag_archive_layout', 'brief')
-        tag_archive_layout = 'archive_' + tag_archive_layout + LAYOUT_EXT
+        tag_archive_layout = 'archive_' + tag_archive_layout + HTML_LAYOUT_EXT
         self.rendered_html = site_obj.html_renderer.render(tag_archive_layout,
                                                            feed_render_ctx)
 
@@ -661,8 +661,8 @@ class Site(object):
 
         self.last_load = None
 
-        self.md_renderer = Markdown(extensions=MD_EXTENSIONS)
-        self.inline_md_renderer = Markdown(extensions=INLINE_MD_EXTENSIONS)
+        self.md_converter = Markdown(extensions=MD_EXTENSIONS)
+        self.inline_md_converter = Markdown(extensions=INLINE_MD_EXTENSIONS)
         self._load_atom_template()
 
     def _set_path(self, name, path, default_suffix=None, required=True):
@@ -849,11 +849,11 @@ class Site(object):
         self._call_custom_hook('pre_load')
         self.html_renderer = AshesEnv(paths=[self.theme_path])
         self.html_renderer.load_all()
-        self.content_renderer = AshesEnv(paths=[self.theme_path],
-                                         exts=['md'],
-                                         keep_whitespace=False)
-        self.content_renderer.autoescape_filter = ''
-        self.content_renderer.load_all()
+        self.md_renderer = AshesEnv(paths=[self.theme_path],
+                                    exts=['md'],
+                                    keep_whitespace=False)
+        self.md_renderer.autoescape_filter = ''
+        self.md_renderer.load_all()
 
         entries_path = self.paths['entries_path']
         entry_paths = []
@@ -921,44 +921,40 @@ class Site(object):
     def render(self):
         self._call_custom_hook('pre_render')
         entries = self.entries
-        mdr, imdr = self.md_renderer, self.inline_md_renderer
+        mdc, imdc = self.md_converter, self.inline_md_converter
         site_info = self.get_site_info()
         canonical_domain = site_info['canonical_domain']
 
-        def render_string(string):
-            rendered_content = mdr.convert(string)
-            mdr.reset()
-            inline_rendered_content = canonicalize_links(string,
-                                                         canonical_domain)
-            imdr.reset()
-            return rendered_content, inline_rendered_content
+        def markdown2html(string):
+            ret = mdc.convert(string)
+            mdc.reset()
+            inline_ret = canonicalize_links(imdc.convert(string),
+                                            canonical_domain)
+            imdc.reset()
+            return ret, inline_ret
 
         def render_parts(entry):
-            rp_list = entry.rendered_parts = []
-            irp_list = entry.inline_rendered_parts = []
-            for part in entry.parts:
-                if isinstance(part, basestring):
-                    rc, irc = render_string(part)
-                    rp_list.append(rc)
-                    irp_list.append(irc)
-                else:
-                    # TODO: recurse
-                    rp_list.append(repr(part))
-                    irp_list.append(repr(part))
-
+            for part in entry.loaded_parts:
+                if not part['content']:
+                    continue
+                html, ihtml = markdown2html(part['content'])
+                part['content_html'], part['content_ihtml'] = html, ihtml
             if not entry.summary:
                 entry.summary = entry._autosummarize()
 
             tmpl_name = entry.layout + '.md'
             render_ctx = {'entry': entry.to_dict(with_links=False),
                           'site': site_info}
-            rendered_md = self.content_renderer.render(tmpl_name, render_ctx)
-            entry.rendered_md = rendered_md
-            entry.rendered_md_html, entry.inline_rendered_md_html = render_string(rendered_md)
+            entry.content_md = self.md_renderer.render(tmpl_name, render_ctx)
+            tmpl_name = 'content' + '.html'  # TODO
+            content_html = self.html_renderer.render(tmpl_name, render_ctx)
+            content_html = add_toc(content_html)
+            entry.content_html = content_html
+            # TODO: inline?
             return
 
         def render_html(entry, with_links=False):
-            tmpl_name = entry.layout + LAYOUT_EXT
+            tmpl_name = entry.layout + HTML_LAYOUT_EXT
             render_ctx = {'entry': entry.to_dict(with_links=with_links),
                           'site': site_info}
             rendered_html = self.html_renderer.render(tmpl_name, render_ctx)
@@ -1018,7 +1014,7 @@ class Site(object):
             with logged_open(html_output_path, 'w') as f:
                 f.write(entry.rendered_html.encode('utf-8'))
             with logged_open(gen_md_output_path, 'w') as f:
-                f.write(entry.rendered_md.encode('utf-8'))
+                f.write(entry.content_md.encode('utf-8'))  # TODO
             with logged_open(data_output_path, 'w') as f:
                 json.dump(entry.loaded_parts, f, indent=2, sort_keys=True)
 
@@ -1191,7 +1187,7 @@ def _iter_changed_files(entries_path, theme_path, interval=0.5):
     while True:
         changed = []
         to_check = itertools.chain(iter_find_files(entries_path, ENTRY_PATS),
-                                   iter_find_files(theme_path, LAYOUT_PAT))
+                                   iter_find_files(theme_path, HTML_LAYOUT_PAT))
         for path in to_check:
             try:
                 new_mtime = os.stat(path).st_mtime

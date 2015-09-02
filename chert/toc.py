@@ -131,7 +131,7 @@ class TOCifier(object):
                 # List item link, to be inserted into the toc div
                 li = ET.SubElement(ul, "li")
                 link = ET.SubElement(li, "a")
-                link.text = item.get('name', '')
+                link.text = item.get('text', '')
                 link.attrib["href"] = '#' + item.get('id', '')
                 if item['children']:
                     build_etree_ul(item['children'], li)
