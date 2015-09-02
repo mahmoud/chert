@@ -176,7 +176,7 @@ div.toc > ul {
 }
 
 div.toc li {
-    margin: 0 0 0.3rem 0rem;
+    margin-bottom: 0.5rem;
 }
 
 div.toc {
