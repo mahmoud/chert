@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import io
 import re
 import os
 import imp
@@ -8,7 +7,6 @@ import json
 import time
 import string
 import shutil
-import hashlib
 import argparse
 import itertools
 import subprocess
@@ -359,11 +357,8 @@ class Entry(object):
                 pub_dt = pub_dt.replace(tzinfo=LocalTZ)
         self.publish_date = pub_dt
 
-        self.edit_list = []  # TODO. also, "changelog"?
-        self.last_edit_date = None  # TODO
-
-        # hash_content = (self.title + self.content).encode('utf-8')
-        # self.entry_hash = hashlib.sha256(hash_content).hexdigest()
+        self.changelog = []  # TODO.
+        self.last_edit_date = []
 
         #no_punct = _punct_re.sub('', self.content)
         #self.word_count = len(no_punct.split())
@@ -950,6 +945,10 @@ class Site(object):
             content_html = self.html_renderer.render(tmpl_name, render_ctx)
             content_html = add_toc(content_html)
             entry.content_html = content_html
+
+            render_ctx['inline'] = True
+            content_ihtml = self.html_renderer.render(tmpl_name, render_ctx)
+            entry.content_ihtml = content_html
             # TODO: inline?
             return
 

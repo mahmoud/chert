@@ -18,6 +18,10 @@ def to_unicode(obj):
         return unicode(obj, encoding='utf8')
 
 
+def remove_marker(text, marker='[TOC]'):
+    return text.replace(marker, '', 1)
+
+
 def add_toc(html, marker='[TOC]', title='Contents', base_header_level=1):
     """Adds a table of contents div where *marker* can be found within p
     tags on its own. Turns headings into links and optionally adjusts
@@ -111,7 +115,10 @@ class TOCifier(object):
                 for i in range(len(p)):
                     if p[i] == c:
                         p[i] = elem
-                        break
+                        # add TOC a maximum of once
+                        return
+
+        # no marker found
         return
 
     def build_toc_div(self, h_token_tree):
