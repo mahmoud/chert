@@ -496,8 +496,11 @@ class Entry(object):
 
     def __repr__(self):
         cn = self.__class__.__name__
-        return ('<%s title=%r word_count=%r>'
-                % (cn, self.title, self.word_count))
+        try:
+            part_count = ' parts=%s' % len(self.parts)
+        except:
+            part_count = ''
+        return '<%s title=%r%s>' % (cn, self.title, part_count)
 
     def to_dict(self, with_links=False):
         ret = dict(headers=self.headers,
@@ -597,6 +600,12 @@ class EntryList(object):
 
     def __getitem__(self, idx):
         return self.entries.__getitem__(idx)
+
+    def __repr__(self):
+        cn = self.__class__.__name__
+        length = len(self.entries)
+        titles = [e.title for e in self.entries]
+        return '<%s length=%s titles=%r>' % (cn, length, titles)
 
     def sort(self, key=None, reverse=None):
         """Sort the entry list by a *key* function, defaulting to sorting by
@@ -874,7 +883,7 @@ class Site(object):
         # Sorting the EntryLists
         self.entries.sort()
         # sorting drafts/special pages doesn't do much
-        self.draft_entries.sort()
+        self.draft_entries.sort(key=lambda e: os.path.getmtime(e.source_path))
         self.special_entries.sort()
 
         self._rebuild_tag_map()
