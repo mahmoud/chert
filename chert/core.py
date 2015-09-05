@@ -630,7 +630,7 @@ class Site(object):
 
         set_path = self._set_path
         set_path('input_path', input_path)
-        set_path('config_path', kw.pop('config_path', None), 'config.yaml')
+        set_path('config_path', kw.pop('config_path', None), 'chert.yaml')
         set_path('entries_path', kw.pop('entries_path', None), 'entries')
         set_path('themes_path', kw.pop('themes_path', None), 'themes')
         set_path('uploads_path', kw.pop('uploads_path', None), 'uploads',
