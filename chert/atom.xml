@@ -15,15 +15,19 @@
   <entry>
     <id>{site.canonical_url}{.output_filename}</id>
     <author>
-      <name>{#.author_name}{.author_name}{:else}{site.author_name}{/author_name}</name>
+      <name>{#headers.author_name}{headers.author_name}{:else}{site.author_name}{/headers.author_name}</name>
       <uri>{site.canonical_url}</uri>
     </author>
-    <title>{.title}</title>
+    <title>{headers.title}</title>
     <link rel="alternate" type="text/html" href="{site.canonical_url}{.output_filename}" />
     <published>{.publish_timestamp_utc}</published>
     <updated>{?.update_timestamp_utc}{.update_timestamp_utc}{:else}{.publish_timestamp_utc}{/update_timestamp_utc}</updated>
-    {#tags}<category term="{.}"/>{/tags}
-    <content type="html">{.inline_rendered_content}</content>
+    {#headers.tags}<category term="{.}"/>{/headers.tags}
+    {! content_ihtml, unlike content_html has certain styles (e.g., code
+    highlighting) inlined so that they show up in RSS readers !}
+
+    <content type="html">{.content_ihtml}</content>
+
   </entry>
   {/entries}
 </feed>
