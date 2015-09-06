@@ -1,5 +1,6 @@
 include README.md LICENSE
 recursive-include chert *
+prune chert/scaffold/site
 
 recursive-exclude *.egg-info *
 recursive-exclude chert/scaffold_old *
