@@ -16,14 +16,12 @@ from SimpleHTTPServer import SimpleHTTPRequestHandler
 from BaseHTTPServer import HTTPServer
 from threading import Thread
 from pipes import quote as shell_quote
-from HTMLParser import HTMLParser
-import htmlentitydefs
 
 import yaml
 from markdown import Markdown
-from boltons.strutils import slugify
+from boltons.strutils import slugify, html2text
 from boltons.dictutils import OrderedMultiDict as OMD
-from boltons.tzutils import LocalTZ, UTC
+from boltons.timeutils import LocalTZ, UTC
 from boltons.fileutils import mkdir_p, copytree, iter_find_files
 from boltons.debugutils import pdb_on_signal
 from lithoxyl import Logger, SensibleSink, Formatter, StreamEmitter
@@ -69,7 +67,6 @@ MD_EXTENSIONS = BASE_MD_EXTENSIONS + [_HILITE]  # , _TOC_EXTENSION]
 _HILITE_INLINE = CodeHiliteExtension(noclasses=True,
                                      pygments_style='emacs')
 INLINE_MD_EXTENSIONS = BASE_MD_EXTENSIONS + [_HILITE_INLINE]
-# TODO: is leftover [TOC] in feed such a bad thing?
 
 ENTRY_ENCODING = 'utf-8'
 ENTRY_PATS = ['*.md', '*.yaml']
@@ -95,7 +92,8 @@ if not CANONICAL_BASE_PATH.endswith('/'):
     CANONICAL_BASE_PATH += '/'
 CANONICAL_URL = CANONICAL_DOMAIN + CANONICAL_BASE_PATH
 
-DEFAULT_LAYOUT = 'entry'
+DEFAULT_ENTRY_LAYOUT = 'entry'
+DEFAULT_CONTENT_LAYOUT = 'content'
 RESERVED_PAGES = ('index', 'archive')
 
 _UNSET = object()
@@ -392,8 +390,12 @@ class Entry(object):
         return self.headers.setdefault('tags', [])
 
     @property
-    def layout(self):
-        return self.headers.get('layout', DEFAULT_LAYOUT)
+    def entry_layout(self):
+        return self.headers.get('entry_layout', DEFAULT_ENTRY_LAYOUT)
+
+    @property
+    def content_layout(self):
+        return self.headers.get('content_layout', DEFAULT_CONTENT_LAYOUT)
 
     @classmethod
     def from_dict(cls, in_dict, **kwargs):
@@ -532,14 +534,15 @@ class Entry(object):
         return ret
 
     def _autosummarize(self):
-        try:
-            summarizable_content = 'TODO'
-        except (AttributeError, IndexError, TypeError):
-            summarizable_content = None
-        if summarizable_content is None:
-            raise ValueError('expected self.rendered_content to be set.'
-                             ' render the entry, then autosummarize.')
-        rendered_text = html2text(summarizable_content)
+        if not self.loaded_parts:
+            raise ValueError('expected loaded_parts to be set.'
+                             ' load and render, then autosummarize')
+        first_part = self.loaded_parts[0]
+        first_part_html = first_part.get('content_html')
+        if first_part_html is None:
+            raise ValueError('expected first part\'s content_html to be set.'
+                             ' render the entry parts, then autosummarize.')
+        rendered_text = html2text(first_part_html)
         summary = ' '.join(rendered_text.split()[:28]) + '...'
         return summary
 
@@ -930,27 +933,31 @@ class Site(object):
         canonical_domain = site_info['canonical_domain']
 
         def markdown2html(string):
+            if not string:
+                return ''
             ret = mdc.convert(string)
             mdc.reset()
-            inline_ret = canonicalize_links(imdc.convert(string),
-                                            canonical_domain)
+            return ret
+
+        def markdown2ihtml(string):
+            if not string:
+                return ''
+            ret = canonicalize_links(imdc.convert(string), canonical_domain)
             imdc.reset()
-            return ret, inline_ret
+            return ret
 
         def render_parts(entry):
             for part in entry.loaded_parts:
-                if not part['content']:
-                    continue
-                html, ihtml = markdown2html(part['content'])
-                part['content_html'], part['content_ihtml'] = html, ihtml
+                part['content_html'] = markdown2html(part['content'])
+                part['content_ihtml'] = markdown2ihtml(part['content'])
             if not entry.summary:
                 entry.summary = entry._autosummarize()
 
-            tmpl_name = entry.layout + '.md'
+            tmpl_name = entry.entry_layout + MD_LAYOUT_EXT
             render_ctx = {'entry': entry.to_dict(with_links=False),
                           'site': site_info}
             entry.content_md = self.md_renderer.render(tmpl_name, render_ctx)
-            tmpl_name = 'content' + '.html'  # TODO
+            tmpl_name = entry.content_layout + HTML_LAYOUT_EXT
             content_html = self.html_renderer.render(tmpl_name, render_ctx)
             content_html = add_toc(content_html)
             entry.content_html = content_html
@@ -958,11 +965,10 @@ class Site(object):
             render_ctx['inline'] = True
             content_ihtml = self.html_renderer.render(tmpl_name, render_ctx)
             entry.content_ihtml = content_html
-            # TODO: inline?
             return
 
         def render_html(entry, with_links=False):
-            tmpl_name = entry.layout + HTML_LAYOUT_EXT
+            tmpl_name = entry.entry_layout + HTML_LAYOUT_EXT
             render_ctx = {'entry': entry.to_dict(with_links=with_links),
                           'site': site_info}
             rendered_html = self.html_renderer.render(tmpl_name, render_ctx)
@@ -1131,8 +1137,8 @@ class Site(object):
         # TODO: hook(s)?
         return
 
-    @rec_dec(chert_log.critical('publish site'))
-    def publish(self):  # deploy?
+    @rec_dec(chert_log.critical('publish site'), 'log_rec')
+    def publish(self, log_rec):  # deploy?
         #self._load_custom_mod()
         #self._call_custom_hook('pre_publish')
         prod_config = self.get_config('prod')
@@ -1153,21 +1159,24 @@ class Site(object):
                                       remote_host,
                                       shell_quote(remote_path))
 
-        full_rsync_cmd = '%s -%s %s %s' % (rsync_cmd,
+        full_rsync_cmd = '%s -%s --timeout=5 %s %s' % (rsync_cmd,
                                            rsync_flags,
                                            local_site_path,
                                            remote_slug)
+        log_rec['rsync_cmd'] = full_rsync_cmd
         print 'Executing', full_rsync_cmd
         try:
             rsync_output = subprocess.check_output(full_rsync_cmd, shell=True)
         except subprocess.CalledProcessError as cpe:
-            return_code = cpe.returncode
+            log_rec['rsync_exit_code'] = cpe.returncode
             rsync_output = cpe.output
             print rsync_output
-            print 'Publish failed, rsync got exit code', return_code
+            log_rec.failure('publish failed: rsync got exit code {rsync_exit_code}')
+            return False
         else:
             print rsync_output
-            print 'Publish succeeded.'
+            log_rec.success()
+        return True
         #self._call_custom_hook('post_publish')
 
 
@@ -1212,7 +1221,6 @@ def _iter_changed_files(entries_path, theme_path, interval=0.5):
 
 """
 TODO: multiple entries in a single file (for short entries)?
-TODO: tie-break publish dates with modified times
 
 Metadata ideas:
   - Source
@@ -1269,17 +1277,6 @@ def get_argparser():
     return prs
 
 
-class ChertRenderer(object):
-    # TODO?
-    def __init__(self, entries, site_info):
-        self.entries = entries
-        self.site_info = site_info
-        self.canonical_domain = site['canonical_domain']
-
-    def render_content(self):
-        pass
-
-
 def main():
     prs = get_argparser()
     kwargs = dict(prs.parse_args()._get_kwargs())
@@ -1288,72 +1285,37 @@ def main():
         ch = Site(os.getcwd(), dev_mode=True)
         ch.serve()
     elif action == 'publish':
-        ch = Site(os.getcwd())
-        ch.process()
-        ch.publish()
+        with chert_log.critical('publish action') as log_rec:
+            ch = Site(os.getcwd())
+            ch.process()
+            success = ch.publish()
+            if success:
+                log_rec.success()
+            else:
+                log_rec.failure()
     elif action == 'version':
         print 'chert version %s' % __version__
         print '  located at: %s' % os.path.abspath(os.path.dirname(__file__))
     elif action == 'render':
-        ch = Site(os.getcwd())
-        ch.process()
+        with chert_log.critical('render action'):
+            ch = Site(os.getcwd())
+            ch.process()
     elif action == 'init':
-        target_dir = abspath(kwargs['target_dir'])
-        if os.path.exists(target_dir):
-            raise RuntimeError('chert init failed, path already exists: %s'
-                               % target_dir)
-        src_dir = pjoin(CUR_PATH, 'scaffold')
-        copytree(src_dir, target_dir)
-        print 'Created Chert instance in directory: %s' % target_dir
+        with chert_log.critical('init action'):
+            target_dir = abspath(kwargs['target_dir'])
+            if os.path.exists(target_dir):
+                raise RuntimeError('chert init failed, path already exists: %s'
+                                   % target_dir)
+            src_dir = pjoin(CUR_PATH, 'scaffold')
+            copytree(src_dir, target_dir)
+            print 'Created Chert instance in directory: %s' % target_dir
     elif action == 'clean':
-        ch = Site(os.getcwd())
-        delete_dir_contents(ch.output_path)
-        print 'Cleaned Chert output path: %s' % ch.output_path
+        with chert_log.critical('clean action'):
+            ch = Site(os.getcwd())
+            delete_dir_contents(ch.output_path)
+            print 'Cleaned Chert output path: %s' % ch.output_path
     else:
         raise ValueError('unknown action: %s' % action)
-
-
-class HTMLTextExtractor(HTMLParser):
-    def __init__(self):
-        self.reset()
-        self.strict = False
-        self.convert_charrefs = True
-        self.result = []
-
-    def handle_data(self, d):
-        self.result.append(d)
-
-    def handle_charref(self, number):
-        if number[0] == u'x' or number[0] == u'X':
-            codepoint = int(number[1:], 16)
-        else:
-            codepoint = int(number)
-        self.result.append(unichr(codepoint))
-
-    def handle_entityref(self, name):
-        try:
-            codepoint = htmlentitydefs.name2codepoint[name]
-        except KeyError:
-            self.result.append(u'&' + name + u';')
-        else:
-            self.result.append(unichr(codepoint))
-
-    def get_text(self):
-        return u''.join(self.result)
-
-
-def html2text(html):
-    """Strips tags from HTML text, returning markup-free text. Also, does
-    a best effort replacement of entities like "&nbsp;"
-
-    >>> r = html2text(u'<a href="#">Test &amp;<em>(\u0394&#x03b7;&#956;&#x03CE;)</em></a>')
-    >>> r == u'Test &(\u0394\u03b7\u03bc\u03ce)'
-    True
-    """
-    # based on answers to http://stackoverflow.com/questions/753052/
-    s = HTMLTextExtractor()
-    s.feed(html)
-    return s.get_text()
 
 
 if __name__ == '__main__':
