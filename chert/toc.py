@@ -84,7 +84,10 @@ class TOCifier(object):
         return
 
     def get_html_text(self):
-        serializer = html5lib.serializer.HTMLSerializer()
+        options = {'quote_attr_values': True,
+                   'use_trailing_solidus': True,
+                   'space_before_trailing_solidus': True}
+        serializer = html5lib.serializer.HTMLSerializer(**options)
         walker = html5lib.getTreeWalker('etree')
         stream = serializer.serialize(walker(self.root))
         return u''.join(stream)
