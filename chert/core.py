@@ -44,6 +44,7 @@ if DEBUG:
 CUR_PATH = os.path.dirname(abspath(__file__))
 DEFAULT_DATE = datetime(2001, 2, 3, microsecond=456789, tzinfo=UTC)
 
+DEFAULT_CONFIG_FILENAME = 'chert.yaml'
 
 SITE_TITLE = 'Chert'
 SITE_HEAD_TITLE = SITE_TITLE  # goes in the head tag
@@ -633,7 +634,8 @@ class Site(object):
 
         set_path = self._set_path
         set_path('input_path', input_path)
-        set_path('config_path', kw.pop('config_path', None), 'chert.yaml')
+        set_path('config_path', kw.pop('config_path', None),
+                 DEFAULT_CONFIG_FILENAME)
         set_path('entries_path', kw.pop('entries_path', None), 'entries')
         set_path('themes_path', kw.pop('themes_path', None), 'themes')
         set_path('uploads_path', kw.pop('uploads_path', None), 'uploads',
@@ -1277,16 +1279,28 @@ def get_argparser():
     return prs
 
 
+def find_chert_dir(start_dir):
+    prev_dir = None
+    cur_dir = os.path.abspath(start_dir)
+    while prev_dir != cur_dir:
+        if os.path.isfile(os.path.join(cur_dir, DEFAULT_CONFIG_FILENAME)):
+            break
+        prev_dir = cur_dir
+        cur_dir = os.path.dirname(cur_dir)
+    return cur_dir
+
+
 def main():
     prs = get_argparser()
     kwargs = dict(prs.parse_args()._get_kwargs())
     action = kwargs['action']
+    input_path = find_chert_dir(os.getcwd())
     if action == 'serve':
-        ch = Site(os.getcwd(), dev_mode=True)
+        ch = Site(input_path, dev_mode=True)
         ch.serve()
     elif action == 'publish':
         with chert_log.critical('publish action') as log_rec:
-            ch = Site(os.getcwd())
+            ch = Site(input_path)
             ch.process()
             success = ch.publish()
             if success:
@@ -1298,7 +1312,7 @@ def main():
         print '  located at: %s' % os.path.abspath(os.path.dirname(__file__))
     elif action == 'render':
         with chert_log.critical('render action'):
-            ch = Site(os.getcwd())
+            ch = Site(input_path)
             ch.process()
     elif action == 'init':
         with chert_log.critical('init action'):
@@ -1311,7 +1325,7 @@ def main():
             print 'Created Chert instance in directory: %s' % target_dir
     elif action == 'clean':
         with chert_log.critical('clean action'):
-            ch = Site(os.getcwd())
+            ch = Site(input_path)
             delete_dir_contents(ch.output_path)
             print 'Cleaned Chert output path: %s' % ch.output_path
     else:
