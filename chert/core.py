@@ -1273,16 +1273,18 @@ def get_argparser():
     return prs
 
 
-def find_chert_dir(start_dir):
+def find_chert_dir(start_dir, config_filename=DEFAULT_CONFIG_FILENAME):
     prev_dir = None
     cur_dir = os.path.abspath(start_dir)
     while prev_dir != cur_dir:
-        if os.path.isfile(os.path.join(cur_dir, DEFAULT_CONFIG_FILENAME)):
+        if os.path.isfile(os.path.join(cur_dir, config_filename)):
             break
         prev_dir = cur_dir
         cur_dir = os.path.dirname(cur_dir)
     else:
-        cur_dir = start_dir
+        raise ValueError('expected current or parent directories to'
+                         ' contain a Chert config file (chert.yaml),'
+                         ' not found in: %s' % start_dir)
     return cur_dir
 
 
