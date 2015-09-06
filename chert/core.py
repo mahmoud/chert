@@ -25,6 +25,7 @@ from boltons.timeutils import LocalTZ, UTC
 from boltons.fileutils import mkdir_p, copytree, iter_find_files
 from boltons.debugutils import pdb_on_signal
 from lithoxyl import Logger, SensibleSink, Formatter, StreamEmitter
+from lithoxyl.filters import ThresholdFilter
 from ashes import AshesEnv, Template
 from dateutil.parser import parse as parse_date
 from markdown.extensions.toc import TocExtension
@@ -106,8 +107,12 @@ chert_log = Logger('chert')
 # TODO: duration_s, duration_ms, duration_us
 stderr_fmt = Formatter('{end_local_iso8601_noms_notz} - {duration_msecs}ms - {message}')
 stderr_emt = StreamEmitter('stderr')
+stderr_filter = ThresholdFilter(success='info',
+                                failure='debug',
+                                exception='debug')
 stderr_sink = SensibleSink(formatter=stderr_fmt,
-                           emitter=stderr_emt)
+                           emitter=stderr_emt,
+                           filters=[stderr_filter])
 chert_log.add_sink(stderr_sink)
 
 
@@ -163,7 +168,7 @@ def rec_dec(record, inject_as=None, **rec_kwargs):
     return func_wrapper
 
 
-def logged_open(path, mode='rb'):
+def logged_open(path, mode='rb', level='debug'):
     # TODO: configurable level
     # TODO: needs to be a context manager of its own, composing the
     # logging and opening together
@@ -177,7 +182,8 @@ def logged_open(path, mode='rb'):
         msg = 'open {path} for append'
     else:
         msg = 'open {path}'
-    with chert_log.critical(msg, path=path):
+    level_method = getattr(chert_log, level)
+    with level_method(msg, path=path):
         return open(path, mode)
 
 
@@ -502,8 +508,7 @@ class Entry(object):
                    entry_id=self.entry_id,
                    output_filename=self.output_filename)
 
-        attrs = ('rendered_md', 'rendered_html',
-                 'inline_rendered_html', 'loaded_parts', 'summary',
+        attrs = ('rendered_md', 'entry_html', 'loaded_parts', 'summary',
                  'content_html', 'content_ihtml')
         for attr in attrs:
             ret[attr] = getattr(self, attr, None)
@@ -647,7 +652,7 @@ class Site(object):
         # set theme
         with chert_log.debug('setting theme'):
             theme_name = self.get_config('theme', 'name')
-            theme_path = os.path.join(self.themes_path, theme_name)
+            theme_path = pjoin(self.themes_path, theme_name)
             self._set_path('theme_path', theme_path)
 
     def reset(self):
@@ -821,9 +826,9 @@ class Site(object):
         if not os.path.exists(custom_mod_path):
             self.custom_mod = None
             return
-        site_name = os.path.split(input_path)[1]
+        # site_name = os.path.split(input_path)[1]
         with chert_log.debug('import site custom module'):
-            mod_name = site_name + '.custom'
+            mod_name = 'custom'
             self.custom_mod = imp.load_source(mod_name, custom_mod_path)
 
     def _call_custom_hook(self, hook_name):
@@ -868,6 +873,9 @@ class Site(object):
                 except:
                     rec.exception('entry load error: {exc_message}')
                     continue
+                else:
+                    rec['entry_title'] = entry.title
+                    rec.success('entry load succeeded: {entry_title}')
             if entry.is_draft:
                 self.draft_entries.append(entry)
             elif entry.is_special:
@@ -955,12 +963,14 @@ class Site(object):
 
             tmpl_name = entry.content_layout + HTML_LAYOUT_EXT
             content_html = self.html_renderer.render(tmpl_name, render_ctx)
-            content_html = add_toc(content_html)
+            with chert_log.debug('adding toc to content html'):
+                content_html = add_toc(content_html)
             entry.content_html = content_html
 
             render_ctx['inline'] = True
             content_ihtml = self.html_renderer.render(tmpl_name, render_ctx)
-            content_ihtml = add_toc(content_ihtml)
+            with chert_log.debug('adding toc to content inline html'):
+                content_ihtml = add_toc(content_ihtml)
             entry.content_ihtml = canonicalize_links(content_ihtml,
                                                      canonical_domain,
                                                      entry.output_filename)
@@ -970,28 +980,33 @@ class Site(object):
             tmpl_name = entry.entry_layout + HTML_LAYOUT_EXT
             render_ctx = {'entry': entry.to_dict(with_links=with_links),
                           'site': site_info}
-            rendered_html = self.html_renderer.render(tmpl_name, render_ctx)
-            entry.rendered_html = rendered_html
+            entry_html = self.html_renderer.render(tmpl_name, render_ctx)
+            entry.entry_html = entry_html
             return
 
-        for entry in entries:
-            render_parts(entry)
-        for entry in self.draft_entries:
-            render_parts(entry)
-        for entry in self.special_entries:
-            render_parts(entry)
+        with chert_log.info('rendering published entry content'):
+            for entry in entries:
+                render_parts(entry)
+        with chert_log.info('rendering draft entry content'):
+            for entry in self.draft_entries:
+                render_parts(entry)
+        with chert_log.info('rendering special entry content'):
+            for entry in self.special_entries:
+                render_parts(entry)
 
-        for entry in entries:
-            render_html(entry, with_links=True)
-        for entry in self.draft_entries:
-            render_html(entry)
-        for entry in self.special_entries:
-            render_html(entry)
+        with chert_log.info('rendering entry html'):
+            for entry in entries:
+                render_html(entry, with_links=True)
+            for entry in self.draft_entries:
+                render_html(entry)
+            for entry in self.special_entries:
+                render_html(entry)
 
         # render feeds
-        self.entries.render(site_obj=self)
-        for tag, entry_list in self.tag_map.items():
-            entry_list.render(site_obj=self)
+        with chert_log.info('rendering feed and tag lists'):
+            self.entries.render(site_obj=self)
+            for tag, entry_list in self.tag_map.items():
+                entry_list.render(site_obj=self)
 
         self._call_custom_hook('post_render')
 
@@ -1025,7 +1040,7 @@ class Site(object):
             gen_md_output_path = pjoin(output_path, entry_gen_md_fn)
 
             with logged_open(html_output_path, 'w') as f:
-                f.write(entry.rendered_html.encode('utf-8'))
+                f.write(entry.entry_html.encode('utf-8'))
             with logged_open(gen_md_output_path, 'w') as f:
                 f.write(entry.content_md.encode('utf-8'))  # TODO
             with logged_open(data_output_path, 'w') as f:
@@ -1045,7 +1060,7 @@ class Site(object):
         # index is just the most recent entry for now
         index_path = pjoin(output_path, 'index' + EXPORT_HTML_EXT)
         if self.entries:
-            index_content = self.entries[0].rendered_html
+            index_content = self.entries[0].entry_html
         else:
             index_content = 'No entries yet!'
         with logged_open(index_path, 'w') as f:
@@ -1244,7 +1259,7 @@ def omd_load(stream, Loader=yaml.Loader, object_pairs_hook=OMD):
 
 def delete_dir_contents(path):
     for entry in os.listdir(path):
-        cur_path = os.path.join(path, entry)
+        cur_path = pjoin(path, entry)
         if os.path.isfile(cur_path) or os.path.islink(cur_path):
             os.unlink(cur_path)
         elif os.path.isdir(cur_path):
@@ -1280,7 +1295,7 @@ def find_chert_dir(start_dir, config_filename=DEFAULT_CONFIG_FILENAME):
     prev_dir = None
     cur_dir = os.path.abspath(start_dir)
     while prev_dir != cur_dir:
-        if os.path.isfile(os.path.join(cur_dir, config_filename)):
+        if os.path.isfile(pjoin(cur_dir, config_filename)):
             break
         prev_dir = cur_dir
         cur_dir = os.path.dirname(cur_dir)
