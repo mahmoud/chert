@@ -33,7 +33,7 @@ from markdown.extensions.codehilite import CodeHiliteExtension
 from hematite.url import URL
 
 from chert.toc import add_toc
-from chert.utils import dt_to_dict
+from chert.utils import dt_to_dict, canonicalize_links
 
 __version__ = '0.0.1dev'
 
@@ -134,14 +134,6 @@ class DevDebugSink(object):
 
 
 chert_log.add_sink(DevDebugSink(post_mortem=os.getenv('CHERT_PDB')))
-
-
-_link_re = re.compile("((?P<attribute>src|href)=\"/)")
-
-
-def canonicalize_links(text, base):
-    # turns links into canonical links for RSS
-    return _link_re.sub(r'\g<attribute>="' + base + '/', text)
 
 
 def _ppath(path):  # lithoxyl todo
@@ -376,6 +368,10 @@ class Entry(object):
         return self.headers.get('entry_id') or slugify(self.title)
 
     @property
+    def output_filename(self):
+        return self.entry_id + EXPORT_HTML_EXT
+
+    @property
     def is_special(self):
         return bool(self.headers.get('special'))
 
@@ -411,11 +407,6 @@ class Entry(object):
             ret = cls.from_string(bytestring,
                                   source_path=in_path)
         return ret
-
-        #entry_dict['source_text'] = logged_open(in_path).read().decode('utf-8')
-        #entry_dict['content'] = text
-        #entry_dict['input_path'] = in_path
-        #return cls.from_dict(entry_dict)
 
     def _load_mappings(self):
         # a little like role->field map, but this strikes me as a more
@@ -508,7 +499,8 @@ class Entry(object):
     def to_dict(self, with_links=False):
         ret = dict(headers=self.headers,
                    parts=self.parts,
-                   entry_id=self.entry_id)
+                   entry_id=self.entry_id,
+                   output_filename=self.output_filename)
 
         attrs = ('rendered_md', 'rendered_html',
                  'inline_rendered_html', 'loaded_parts', 'summary',
@@ -530,8 +522,6 @@ class Entry(object):
         else:
             ret['update_timestamp_local'] = None
             ret['update_timestamp_utc'] = None
-
-        ret['output_filename'] = ret['entry_id'] + EXPORT_HTML_EXT
         return ret
 
     def _autosummarize(self):
@@ -644,10 +634,10 @@ class Site(object):
                  required=False)
         self.reload_config()
         self.reset()
-        chert_log.debug('init site').success()
         self.dev_mode = kw.pop('dev_mode', False)
         if kw:
             raise TypeError('unexpected keyword arguments: %r' % kw)
+        chert_log.debug('init site').success()
         return
 
     def reload_config(self, **kw):
@@ -941,17 +931,20 @@ class Site(object):
             mdc.reset()
             return ret
 
-        def markdown2ihtml(string):
+        def markdown2ihtml(string, entry_fn):
             if not string:
                 return ''
-            ret = canonicalize_links(imdc.convert(string), canonical_domain)
+            ret = canonicalize_links(imdc.convert(string),
+                                     canonical_domain,
+                                     entry_fn)
             imdc.reset()
             return ret
 
         def render_parts(entry):
             for part in entry.loaded_parts:
                 part['content_html'] = markdown2html(part['content'])
-                part['content_ihtml'] = markdown2ihtml(part['content'])
+                part['content_ihtml'] = markdown2ihtml(part['content'],
+                                                       entry.output_filename)
             if not entry.summary:
                 entry.summary = entry._autosummarize()
 
@@ -959,14 +952,15 @@ class Site(object):
             render_ctx = {'entry': entry.to_dict(with_links=False),
                           'site': site_info}
             entry.content_md = self.md_renderer.render(tmpl_name, render_ctx)
+
             tmpl_name = entry.content_layout + HTML_LAYOUT_EXT
             content_html = self.html_renderer.render(tmpl_name, render_ctx)
             content_html = add_toc(content_html)
             entry.content_html = content_html
 
             render_ctx['inline'] = True
-            content_ihtml = self.html_renderer.render(tmpl_name, render_ctx)
-            entry.content_ihtml = content_html
+            entry.content_ihtml = self.html_renderer.render(tmpl_name,
+                                                            render_ctx)
             return
 
         def render_html(entry, with_links=False):
