@@ -1292,6 +1292,18 @@ def main():
     prs = get_argparser()
     kwargs = dict(prs.parse_args()._get_kwargs())
     action = kwargs['action']
+
+    if action == 'init':
+        with chert_log.critical('init action'):
+            target_dir = abspath(kwargs['target_dir'])
+            if os.path.exists(target_dir):
+                raise RuntimeError('chert init failed, path already exists: %s'
+                                   % target_dir)
+            src_dir = pjoin(CUR_PATH, 'scaffold')
+            copytree(src_dir, target_dir)
+            print 'Created Chert instance in directory: %s' % target_dir
+        return
+
     input_path = find_chert_dir(os.getcwd())
     if action == 'serve':
         ch = Site(input_path, dev_mode=True)
@@ -1312,15 +1324,6 @@ def main():
         with chert_log.critical('render action'):
             ch = Site(input_path)
             ch.process()
-    elif action == 'init':
-        with chert_log.critical('init action'):
-            target_dir = abspath(kwargs['target_dir'])
-            if os.path.exists(target_dir):
-                raise RuntimeError('chert init failed, path already exists: %s'
-                                   % target_dir)
-            src_dir = pjoin(CUR_PATH, 'scaffold')
-            copytree(src_dir, target_dir)
-            print 'Created Chert instance in directory: %s' % target_dir
     elif action == 'clean':
         with chert_log.critical('clean action'):
             ch = Site(input_path)
