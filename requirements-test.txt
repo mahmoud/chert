@@ -1,0 +1,13 @@
+ashes==15.0.0
+boltons==15.0.1
+-e git+git@github.com:mahmoud/chert.git@d56cb60cde453e064d3809f2467840a515d9d240#egg=chert-parts_format
+hematite==0.0.2
+html5lib==0.999999
+lithoxyl==0.1.0
+Markdown==2.6.2
+py==1.4.30
+Pygments==1.6
+pytest==2.7.2
+python-dateutil==2.2
+PyYAML==3.11
+six==1.9.0
