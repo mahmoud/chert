@@ -1,11 +1,18 @@
+
 {#entry.loaded_parts}
 {^data_idx}
+
+{?inline}
+<p>{content_ihtml|s}</p>
+{:else}
 <p>{content_html|s}</p>
+{/inline}
+
 {:else}
 {?ordinal_text}
-<h3>{title}</h3>
-{:else}
 <h3>{ordinal_text} {title}</h3>
+{:else}
+<h3>{title}</h3>
 {/ordinal_text}
 {?attrs}
 <ul class="attr-ul">
@@ -19,7 +26,15 @@
 {/value}{/links}
 </ul>
 {/attrs}
-{?content}<p>{content_html|s}</p>{/content}
+{?content}
+
+{?inline}
+<p>{content_ihtml|s}</p>
+{:else}
+<p>{content_html|s}</p>
+{/inline}
+
+{/content}
 {/data_idx}
 <hr />
 {/entry.loaded_parts}

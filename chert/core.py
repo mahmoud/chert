@@ -699,8 +699,8 @@ class Site(object):
             atom_tmpl_path = default_atom_tmpl_path
 
         # TODO: defer opening to loading?
-        atom_tmpl_str = open(atom_tmpl_path).read()
-        self.atom_template = Template(FEED_FILENAME, atom_tmpl_str)
+        self.atom_template = Template.from_path(atom_tmpl_path,
+                                                name=FEED_FILENAME)
 
     def get_config(self, section, key=None, default=_UNSET):
         try:
@@ -959,8 +959,11 @@ class Site(object):
             entry.content_html = content_html
 
             render_ctx['inline'] = True
-            entry.content_ihtml = self.html_renderer.render(tmpl_name,
-                                                            render_ctx)
+            content_ihtml = self.html_renderer.render(tmpl_name, render_ctx)
+            content_ihtml = add_toc(content_ihtml)
+            entry.content_ihtml = canonicalize_links(content_ihtml,
+                                                     canonical_domain,
+                                                     entry.output_filename)
             return
 
         def render_html(entry, with_links=False):
