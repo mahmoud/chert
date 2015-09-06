@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 
-from chert.core import Site, Entry, __version__
+from chert.version import __version__

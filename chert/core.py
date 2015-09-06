@@ -34,8 +34,8 @@ from hematite.url import URL
 
 from chert.toc import add_toc
 from chert.utils import dt_to_dict, canonicalize_links
+from chert.version import __version__
 
-__version__ = '0.0.1dev'
 
 DEBUG = False
 if DEBUG:
@@ -1281,6 +1281,8 @@ def find_chert_dir(start_dir):
             break
         prev_dir = cur_dir
         cur_dir = os.path.dirname(cur_dir)
+    else:
+        cur_dir = start_dir
     return cur_dir
 
 
