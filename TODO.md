@@ -6,7 +6,7 @@
   field is defined, then the next document, if present, is a separate
   post.
 
-* Finish support for non-root-path-based installations
+* Support for non-root-path-based installations
 
 * Make ToC style (numbered or bullets) configurable on a per-post
   basis (some posts, e.g., myths of python) may have internal numbers
@@ -17,9 +17,6 @@
 * Data pages (YAML files that get rendered to markdown at load time)
 
 * https canonical urls (should feed ID, etc. be scheme-less?)
-
-* make loads idempotent instead of explicit reset (was getting
-  duplicates in EntryLists on server reload)
 
 * logs directory (+ add gitignore and note in scaffold README)
 
@@ -32,3 +29,9 @@
 
 * Data file generation
   * markdown posts should generate a data file with all the links
+
+* Add links to various files in the render context
+  * Source
+  * Standardized Source
+  * HTML
+  * Text

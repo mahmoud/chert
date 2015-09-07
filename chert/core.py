@@ -12,6 +12,7 @@ import itertools
 import subprocess
 from datetime import datetime
 from os.path import abspath, join as pjoin
+from SocketServer import ThreadingMixIn
 from SimpleHTTPServer import SimpleHTTPRequestHandler
 from BaseHTTPServer import HTTPServer
 from threading import Thread
@@ -1127,7 +1128,11 @@ class Site(object):
         Handler.extensions_map.update({'.md': 'text/plain',
                                        '.json': 'application/json'})
 
-        server = HTTPServer((host, port), Handler)
+
+        class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+            """Handle requests in a separate thread."""
+
+        server = ThreadedHTTPServer((host, port), Handler)
         serving = False
 
         entries_path = self.paths['entries_path']
