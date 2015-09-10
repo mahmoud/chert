@@ -78,7 +78,7 @@ HTML_LAYOUT_PAT = '*' + HTML_LAYOUT_EXT
 MD_LAYOUT_EXT = '.md'
 MD_LAYOUT_PAT = '*' + MD_LAYOUT_EXT
 
-FEED_FILENAME = 'atom.xml'
+ATOM_FEED_FILENAME = 'atom.xml'
 EXPORT_SRC_EXT = '.md'
 EXPORT_HTML_EXT = '.html'  # some people might prefer .htm
 
@@ -563,10 +563,10 @@ class EntryList(object):
         canonical_url = site_info['canonical_url']
         if self.tag:
             canonical_url += self.tag_path_part + self.tag + '/'
-        canonical_feed_url = canonical_url + FEED_FILENAME
+        canonical_feed_url = canonical_url + ATOM_FEED_FILENAME
         ret['tag'] = self.tag or ''
         ret['canonical_url'] = canonical_url
-        ret['canonical_feed_url'] = canonical_feed_url
+        ret['canonical_atom_feed_url'] = canonical_feed_url
         return ret
 
     def render(self, site_obj):
@@ -579,7 +579,7 @@ class EntryList(object):
         feed_render_ctx = {'entries': entry_ctxs,
                            'site': site_info,
                            'list': list_info}
-        self.rendered_feed = site_obj.atom_template.render(feed_render_ctx)
+        self.rendered_atom_feed = site_obj.atom_template.render(feed_render_ctx)
 
         tag_archive_layout = site_obj.get_config('site', 'tag_archive_layout', 'brief')
         tag_archive_layout = 'archive_' + tag_archive_layout + HTML_LAYOUT_EXT
@@ -699,14 +699,14 @@ class Site(object):
         return
 
     def _load_atom_template(self):
-        default_atom_tmpl_path = pjoin(CUR_PATH, FEED_FILENAME)
-        atom_tmpl_path = pjoin(self.theme_path, FEED_FILENAME)
+        default_atom_tmpl_path = pjoin(CUR_PATH, ATOM_FEED_FILENAME)
+        atom_tmpl_path = pjoin(self.theme_path, ATOM_FEED_FILENAME)
         if not os.path.exists(atom_tmpl_path):
             atom_tmpl_path = default_atom_tmpl_path
 
         # TODO: defer opening to loading?
         self.atom_template = Template.from_path(atom_tmpl_path,
-                                                name=FEED_FILENAME)
+                                                name=ATOM_FEED_FILENAME)
 
     def get_config(self, section, key=None, default=_UNSET):
         try:
@@ -751,8 +751,8 @@ class Site(object):
         if not ret['canonical_base_path'].endswith('/'):
             ret['canonical_base_path'] += '/'
         ret['canonical_url'] = ret['canonical_domain'] + ret['canonical_base_path']
-        ret['feed_url'] = ret['canonical_base_path'] + FEED_FILENAME
-        ret['canonical_feed_url'] = ret['canonical_url'] + FEED_FILENAME
+        ret['atom_feed_url'] = ret['canonical_base_path'] + ATOM_FEED_FILENAME
+        ret['canonical_atom_feed_url'] = ret['canonical_url'] + ATOM_FEED_FILENAME
 
         now = datetime.now(LocalTZ)
         ret['last_generated'] = to_timestamp(now)
@@ -1071,16 +1071,16 @@ class Site(object):
             f.write(self.entries.rendered_html.encode('utf-8'))
 
         # atom feeds
-        atom_path = pjoin(output_path, FEED_FILENAME)
+        atom_path = pjoin(output_path, ATOM_FEED_FILENAME)
         with logged_open(atom_path, 'w') as f:
-            f.write(self.entries.rendered_feed.encode('utf-8'))
+            f.write(self.entries.rendered_atom_feed.encode('utf-8'))
         for tag, entry_list in self.tag_map.items():
             tag_path = pjoin(output_path, entry_list.path_part)
             mkdir_p(tag_path)
             atom_path = pjoin(tag_path, 'atom.xml')
             archive_path = pjoin(tag_path, 'index.html')
             with logged_open(atom_path, 'w') as f:
-                f.write(entry_list.rendered_feed.encode('utf-8'))
+                f.write(entry_list.rendered_atom_feed.encode('utf-8'))
             with logged_open(archive_path, 'w') as f:
                 f.write(entry_list.rendered_html.encode('utf-8'))
 

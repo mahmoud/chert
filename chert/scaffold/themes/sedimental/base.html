@@ -3,9 +3,9 @@
 <head>
   <meta charset="{site.charset}">
   <title>{+head_title}{site.head_title}{/head_title}</title>
-  <meta name="description" content="{site.meta_desc}">
-  <meta name="author" content="{site.meta_author}">
-  <link href="{site.feed_url}" title="{site.head_title} Feed" type="application/atom+xml" rel="alternate"></link>
+  <meta name="author" content="{site.author_name}">
+  <meta name="description" content="{site.tagline}">
+  <link href="{site.atom_feed_url}" title="{site.head_title} Feed" type="application/atom+xml" rel="alternate" />
 
   <!-- Mobile Specific Meta -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -74,7 +74,7 @@
     <div class="table-block">
       <div class="container">
         <footer id="footer" class="twelve columns">
-          {site.copyright_notice|s} <a href="{site.feed_url}"><img height="14" src="/img/feed.png"></a>
+          {site.copyright_notice|s} <a href="{site.atom_feed_url}"><img height="14" src="/img/feed.png"></a>
         </footer>
       </div>
     </div>  <!-- end table block footer div -->
