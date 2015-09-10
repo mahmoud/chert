@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:sy="http://purl.org/rss/1.0/modules/syndication/" xmlns:media="http://search.yahoo.com/mrss/" xml:lang="{site.lang_code}" version="2.0">
+    <channel>
+      <title>{site.title}{?list.tag} - {list.tag}{/list.tag}</title>
+      <link>{list.canonical_url}</link>
+      <description>{site.tagline}</description>
+      <generator uri="https://github.com/mahmoud/chert">Chert 0.1</generator>  <!-- TODO -->
+      <language>{site.lang_code}</language>
+      <copyright>{site.copyright_notice}</copyright>
+      <lastBuildDate>{site.last_generated_utc}</lastBuildDate>  <!-- TODO: date format -->
+      <sy:updatePeriod>hourly</sy:updatePeriod>
+      <sy:updateFrequency>1</sy:updateFrequency>
+      <!--
+          <image>
+            <title></title>
+            <url></url>
+            <link></link>
+          </image>
+      -->
+      {#entries}
+      <item>
+        <title>{headers.title}</title>
+        <pubDate>{.publish_timestamp_utc}</pubDate>
+        <guid isPermaLink="false">{site.canonical_url}{.output_filename}</guid>
+        <link>{site.canonical_url}{.output_filename}</link>
+        <description>{.content_ihtml}</description>
+
+        {#headers.tags}<category>{.}</category>
+        {/headers.tags}
+      </item>
+      {/entries}
+    </channel>
+</rss>
