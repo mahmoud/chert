@@ -8,6 +8,7 @@
       <language>{site.lang_code}</language>
       <copyright>{site.copyright_notice}</copyright>
       <lastBuildDate>{site.last_generated_utc}</lastBuildDate>  <!-- TODO: date format -->
+      <ttl>60</ttl>
       <sy:updatePeriod>hourly</sy:updatePeriod>
       <sy:updateFrequency>1</sy:updateFrequency>
       <!--
@@ -23,7 +24,9 @@
         <pubDate>{.publish_timestamp_utc}</pubDate>
         <guid isPermaLink="false">{site.canonical_url}{.output_filename}</guid>
         <link>{site.canonical_url}{.output_filename}</link>
-        <description>{.content_ihtml}</description>
+        <description>
+          {.content_ihtml}
+        </description>
 
         {#headers.tags}<category>{.}</category>
         {/headers.tags}

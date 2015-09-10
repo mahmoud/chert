@@ -78,6 +78,7 @@ HTML_LAYOUT_PAT = '*' + HTML_LAYOUT_EXT
 MD_LAYOUT_EXT = '.md'
 MD_LAYOUT_PAT = '*' + MD_LAYOUT_EXT
 
+RSS_FEED_FILENAME = 'rss.xml'
 ATOM_FEED_FILENAME = 'atom.xml'
 EXPORT_SRC_EXT = '.md'
 EXPORT_HTML_EXT = '.html'  # some people might prefer .htm
@@ -563,10 +564,13 @@ class EntryList(object):
         canonical_url = site_info['canonical_url']
         if self.tag:
             canonical_url += self.tag_path_part + self.tag + '/'
-        canonical_feed_url = canonical_url + ATOM_FEED_FILENAME
+        canonical_rss_feed_url = canonical_url + RSS_FEED_FILENAME
+        canonical_atom_feed_url = canonical_url + ATOM_FEED_FILENAME
+
         ret['tag'] = self.tag or ''
         ret['canonical_url'] = canonical_url
-        ret['canonical_atom_feed_url'] = canonical_feed_url
+        ret['canonical_rss_feed_url'] = canonical_rss_feed_url
+        ret['canonical_atom_feed_url'] = canonical_atom_feed_url
         return ret
 
     def render(self, site_obj):
@@ -579,6 +583,7 @@ class EntryList(object):
         feed_render_ctx = {'entries': entry_ctxs,
                            'site': site_info,
                            'list': list_info}
+        self.rendered_rss_feed = site_obj.rss_template.render(feed_render_ctx)
         self.rendered_atom_feed = site_obj.atom_template.render(feed_render_ctx)
 
         tag_archive_layout = site_obj.get_config('site', 'tag_archive_layout', 'brief')
@@ -668,7 +673,8 @@ class Site(object):
 
         self.md_converter = Markdown(extensions=MD_EXTENSIONS)
         self.inline_md_converter = Markdown(extensions=INLINE_MD_EXTENSIONS)
-        self._load_atom_template()
+        self._load_feed_templates()
+        return
 
     def _set_path(self, name, path, default_suffix=None, required=True):
         """Set a path.
@@ -698,15 +704,22 @@ class Site(object):
                         path_val=self.paths[name])
         return
 
-    def _load_atom_template(self):
+    def _load_feed_templates(self):
         default_atom_tmpl_path = pjoin(CUR_PATH, ATOM_FEED_FILENAME)
         atom_tmpl_path = pjoin(self.theme_path, ATOM_FEED_FILENAME)
         if not os.path.exists(atom_tmpl_path):
             atom_tmpl_path = default_atom_tmpl_path
-
         # TODO: defer opening to loading?
         self.atom_template = Template.from_path(atom_tmpl_path,
                                                 name=ATOM_FEED_FILENAME)
+
+        default_rss_tmpl_path = pjoin(CUR_PATH, RSS_FEED_FILENAME)
+        rss_tmpl_path = pjoin(self.theme_path, RSS_FEED_FILENAME)
+        if not os.path.exists(rss_tmpl_path):
+            rss_tmpl_path = default_rss_tmpl_path
+        # TODO: defer opening to loading?
+        self.rss_template = Template.from_path(rss_tmpl_path,
+                                               name=RSS_FEED_FILENAME)
 
     def get_config(self, section, key=None, default=_UNSET):
         try:
@@ -751,6 +764,8 @@ class Site(object):
         if not ret['canonical_base_path'].endswith('/'):
             ret['canonical_base_path'] += '/'
         ret['canonical_url'] = ret['canonical_domain'] + ret['canonical_base_path']
+        ret['rss_feed_url'] = ret['canonical_base_path'] + RSS_FEED_FILENAME
+        ret['canonical_rss_feed_url'] = ret['canonical_url'] + RSS_FEED_FILENAME
         ret['atom_feed_url'] = ret['canonical_base_path'] + ATOM_FEED_FILENAME
         ret['canonical_atom_feed_url'] = ret['canonical_url'] + ATOM_FEED_FILENAME
 
@@ -1070,15 +1085,22 @@ class Site(object):
         with logged_open(archive_path, 'w') as f:
             f.write(self.entries.rendered_html.encode('utf-8'))
 
-        # atom feeds
+        # output feeds
+        rss_path = pjoin(output_path, RSS_FEED_FILENAME)
+        with logged_open(rss_path, 'w') as f:
+            f.write(self.entries.rendered_rss_feed.encode('utf-8'))
         atom_path = pjoin(output_path, ATOM_FEED_FILENAME)
         with logged_open(atom_path, 'w') as f:
             f.write(self.entries.rendered_atom_feed.encode('utf-8'))
+
         for tag, entry_list in self.tag_map.items():
             tag_path = pjoin(output_path, entry_list.path_part)
             mkdir_p(tag_path)
-            atom_path = pjoin(tag_path, 'atom.xml')
+            rss_path = pjoin(tag_path, RSS_FEED_FILENAME)
+            atom_path = pjoin(tag_path, ATOM_FEED_FILENAME)
             archive_path = pjoin(tag_path, 'index.html')
+            with logged_open(rss_path, 'w') as f:
+                f.write(entry_list.rendered_rss_feed.encode('utf-8'))
             with logged_open(atom_path, 'w') as f:
                 f.write(entry_list.rendered_atom_feed.encode('utf-8'))
             with logged_open(archive_path, 'w') as f:
