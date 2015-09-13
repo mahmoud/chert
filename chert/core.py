@@ -1200,7 +1200,7 @@ class Site(object):
                                       remote_host,
                                       shell_quote(remote_path))
 
-        full_rsync_cmd = '%s -%s --timeout=5 %s %s' % (rsync_cmd,
+        full_rsync_cmd = '%s -%s %s %s' % (rsync_cmd,
                                            rsync_flags,
                                            local_site_path,
                                            remote_slug)
