@@ -25,8 +25,6 @@ from boltons.dictutils import OrderedMultiDict as OMD
 from boltons.timeutils import LocalTZ, UTC
 from boltons.fileutils import mkdir_p, copytree, iter_find_files
 from boltons.debugutils import pdb_on_signal
-from lithoxyl import Logger, SensibleSink, Formatter, StreamEmitter
-from lithoxyl.filters import ThresholdFilter
 from ashes import AshesEnv, Template
 from dateutil.parser import parse as parse_date
 from markdown.extensions.toc import TocExtension
@@ -37,6 +35,8 @@ from hematite.url import URL
 from chert.toc import add_toc
 from chert.utils import dt_to_dict, canonicalize_links
 from chert.version import __version__
+from chert.log import rec_dec, chert_log as chlog
+from chert.fal import ChertFAL
 
 
 DEBUG = False
@@ -103,90 +103,6 @@ RESERVED_PAGES = ('index', 'archive')
 _UNSET = object()
 
 _part_sep_re = re.compile(b'^---(?:\r\n?|\n)', flags=re.MULTILINE)
-
-
-chert_log = Logger('chert')
-# TODO: duration_s, duration_ms, duration_us
-stderr_fmt = Formatter('{end_local_iso8601_noms_notz} - {duration_msecs}ms - {message}')
-stderr_emt = StreamEmitter('stderr')
-stderr_filter = ThresholdFilter(success='info',
-                                failure='debug',
-                                exception='debug')
-stderr_sink = SensibleSink(formatter=stderr_fmt,
-                           emitter=stderr_emt,
-                           filters=[stderr_filter])
-chert_log.add_sink(stderr_sink)
-
-
-# Lithoxyl TODO: Sink which emits an extra record if a certain amount
-# of time has passed.
-
-class DevDebugSink(object):
-    # TODO: configurable max number of traceback signatures, after
-    #       which exit/ignore?
-
-    def __init__(self, reraise=False, post_mortem=False):
-        self.reraise = reraise
-        self.post_mortem = post_mortem
-
-    #def on_complete(self, record):
-    #    if record.name == 'entry load':
-    #        import pdb;pdb.set_trace()
-
-    def on_exception(self, record, exc_type, exc_obj, exc_tb):
-        if self.post_mortem:
-            import pdb; pdb.post_mortem()
-        if self.reraise:
-            raise exc_type, exc_obj, exc_tb
-
-
-chert_log.add_sink(DevDebugSink(post_mortem=os.getenv('CHERT_PDB')))
-
-
-def _ppath(path):  # lithoxyl todo
-    # find module path (or package path) and relativize to that?
-    if not path.startswith('/'):
-        return path
-    rel_path = os.path.relpath(path, input_path)
-    if rel_path.startswith('..'):
-        return path
-    return rel_path
-
-
-def rec_dec(record, inject_as=None, **rec_kwargs):
-    if inject_as and not isinstance(inject_as, str):
-        raise TypeError('inspect_as expected string, not: %r' % inject_as)
-    def func_wrapper(func):
-        def logged_func(*a, **kw):
-            # kwargs: reraise + extras. message/raw_message/etc?
-            # rewrite Callpoint of record to be the actual wrapped function?
-            logger = record.logger
-            new_record = logger.record(record.name, record.level, **rec_kwargs)
-            if inject_as:
-                kw[inject_as] = new_record
-            with new_record:
-                return func(*a, **kw)
-        return logged_func
-    return func_wrapper
-
-
-def logged_open(path, mode='rb', level='debug'):
-    # TODO: configurable level
-    # TODO: needs to be a context manager of its own, composing the
-    # logging and opening together
-
-    open_type = mode[0]
-    if open_type == 'r':
-        msg = 'open {path} for read'
-    elif open_type == 'w':
-        msg = 'open {path} for write'
-    elif open_type == 'a':
-        msg = 'open {path} for append'
-    else:
-        msg = 'open {path}'
-    level_method = getattr(chert_log, level)
-    with level_method(msg, path=path):
-        return open(path, mode)
 
 
 class StringLoaded(Exception):
@@ -410,10 +326,9 @@ class Entry(object):
 
     @classmethod
     def from_path(cls, in_path):
-        with logged_open(in_path) as f:
-            bytestring = f.read()
-            ret = cls.from_string(bytestring,
-                                  source_path=in_path)
+        bytestring = ChertFAL(chlog).read(in_path)
+        ret = cls.from_string(bytestring,
+                              source_path=in_path)
         return ret
 
     def _load_mappings(self):
@@ -632,6 +547,7 @@ class Site(object):
         # setting up paths
         self.paths = OMD()
         self._paths = OMD()  # for the raw input paths
+        self.fal = ChertFAL(chlog)
 
         set_path = self._set_path
         set_path('input_path', input_path)
@@ -648,15 +564,15 @@ class Site(object):
         self.dev_mode = kw.pop('dev_mode', False)
         if kw:
             raise TypeError('unexpected keyword arguments: %r' % kw)
-        chert_log.debug('init site').success()
+        chlog.debug('init site').success()
         return
 
     def reload_config(self, **kw):
         # TODO: take optional kwarg
-        self.config = yaml.load(logged_open(self.paths['config_path']))
+        self.config = yaml.load(self.fal.read(self.paths['config_path']))
 
         # set theme
-        with chert_log.debug('setting theme'):
+        with chlog.debug('setting theme'):
             theme_name = self.get_config('theme', 'name')
             theme_path = pjoin(self.themes_path, theme_name)
             self._set_path('theme_path', theme_path)
@@ -687,7 +603,7 @@ class Site(object):
                 be set.
             required: raise an error if path does not exist
         """
-        with chert_log.debug('set {path_name} path to {path_val}',
+        with chlog.debug('set {path_name} path to {path_val}',
                              path_name=name, path_val=path) as rec:
             self._paths[name] = path
             if path:
@@ -777,7 +693,7 @@ class Site(object):
         return ret
 
     def _get_analytics_code(self):
-        with chert_log.info('set analytics code') as rec:
+        with chlog.info('set analytics code') as rec:
             code = self.get_config('site', 'analytics_code', None)
             if code is None:
                 rec.failure('site.analytics_code not set in config.yaml')
@@ -843,14 +759,14 @@ class Site(object):
             self.custom_mod = None
             return
         # site_name = os.path.split(input_path)[1]
-        with chert_log.debug('import site custom module'):
+        with chlog.debug('import site custom module'):
             mod_name = 'custom'
             self.custom_mod = imp.load_source(mod_name, custom_mod_path)
 
     def _call_custom_hook(self, hook_name):
-        with chert_log.debug('call custom {hook_name} hook',
-                             hook_name=hook_name,
-                             reraise=False) as rec:
+        with chlog.debug('call custom {hook_name} hook',
+                         hook_name=hook_name,
+                         reraise=False) as rec:
             if not self.custom_mod:
                 # TODO: success or failure?
                 rec.failure('no custom module loaded')
@@ -862,7 +778,7 @@ class Site(object):
             hook_func(self)
         return
 
-    @rec_dec(chert_log.critical('load site'))
+    @rec_dec(chlog.critical('load site'))
     def load(self):
         self.last_load = time.time()
         self._load_custom_mod()
@@ -880,7 +796,7 @@ class Site(object):
         for entry_path in iter_find_files(entries_path, ENTRY_PATS):
             entry_paths.append(entry_path)
         for ep in entry_paths:
-            with chert_log.info('entry load') as rec:
+            with chlog.info('entry load') as rec:
                 try:
                     entry = self._entry_type.from_path(ep)
                 except IOError:
@@ -925,7 +841,7 @@ class Site(object):
         for tag, entry_list in self.tag_map.items():
             entry_list.sort()
 
-    @rec_dec(chert_log.critical('validate site'))
+    @rec_dec(chlog.critical('validate site'))
     def validate(self):
         self._call_custom_hook('pre_validate')
         dup_id_map = {}
@@ -940,7 +856,7 @@ class Site(object):
 
         # TODO: assert necessary templates are present (entry.html, etc.)
 
-    @rec_dec(chert_log.critical('render site'))
+    @rec_dec(chlog.critical('render site'))
     def render(self):
         self._call_custom_hook('pre_render')
         entries = self.entries
@@ -979,13 +895,13 @@ class Site(object):
 
             tmpl_name = entry.content_layout + HTML_LAYOUT_EXT
             content_html = self.html_renderer.render(tmpl_name, render_ctx)
-            with chert_log.debug('adding toc to content html'):
+            with chlog.debug('adding toc to content html'):
                 content_html = add_toc(content_html)
             entry.content_html = content_html
 
             render_ctx['inline'] = True
             content_ihtml = self.html_renderer.render(tmpl_name, render_ctx)
-            with chert_log.debug('adding toc to content inline html'):
+            with chlog.debug('adding toc to content inline html'):
                 content_ihtml = add_toc(content_ihtml)
             entry.content_ihtml = canonicalize_links(content_ihtml,
                                                      canonical_domain,
@@ -1000,17 +916,17 @@ class Site(object):
             entry.entry_html = entry_html
             return
 
-        with chert_log.info('rendering published entry content'):
+        with chlog.info('render published entry content'):
             for entry in entries:
                 render_parts(entry)
-        with chert_log.info('rendering draft entry content'):
+        with chlog.info('render draft entry content'):
             for entry in self.draft_entries:
                 render_parts(entry)
-        with chert_log.info('rendering special entry content'):
+        with chlog.info('render special entry content'):
             for entry in self.special_entries:
                 render_parts(entry)
 
-        with chert_log.info('rendering entry html'):
+        with chlog.info('render entry html'):
             for entry in entries:
                 render_html(entry, with_links=True)
             for entry in self.draft_entries:
@@ -1019,14 +935,14 @@ class Site(object):
                 render_html(entry)
 
         # render feeds
-        with chert_log.info('rendering feed and tag lists'):
+        with chlog.info('render feed and tag lists'):
             self.entries.render(site_obj=self)
             for tag, entry_list in self.tag_map.items():
                 entry_list.render(site_obj=self)
 
         self._call_custom_hook('post_render')
 
-    @rec_dec(chert_log.critical('audit site'))
+    @rec_dec(chlog.critical('audit site'))
     def audit(self):
         """
         Validation of rendered content, to be used for link checking.
@@ -1037,12 +953,13 @@ class Site(object):
         self._call_custom_hook('pre_audit')
         self._call_custom_hook('post_audit')
 
-    @rec_dec(chert_log.critical('export site'))
+    @rec_dec(chlog.critical('export site'))
     def export(self):
+        fal = self.fal
         self._call_custom_hook('pre_export')
         output_path = self.paths['output_path']
 
-        with chert_log.critical('create output path'):
+        with chlog.critical('create output path'):
             mkdir_p(output_path)
 
         def export_entry(entry):
@@ -1055,16 +972,16 @@ class Site(object):
             data_output_path = pjoin(output_path, entry_data_fn)
             gen_md_output_path = pjoin(output_path, entry_gen_md_fn)
 
-            with logged_open(html_output_path, 'w') as f:
-                f.write(entry.entry_html.encode('utf-8'))
-            with logged_open(gen_md_output_path, 'w') as f:
-                f.write(entry.content_md.encode('utf-8'))  # TODO
-            with logged_open(data_output_path, 'w') as f:
-                json.dump(entry.loaded_parts, f, indent=2, sort_keys=True)
+            #fal.write(html_output_path, entry.entry_html)
+            #
+            fal.write(html_output_path, entry.entry_html)
+            fal.write(gen_md_output_path, entry.content_md)  # TODO
+            _data = json.dumps(entry.loaded_parts, indent=2, sort_keys=True)
+            fal.write(data_output_path, _data)
 
             # TODO: copy file
-            #with logged_open(src_output_path, 'w') as f:
-            #    f.write(entry.source_text.encode('utf-8'))
+            # fal.write(src_output_path, entry.source_text)
+            return
 
         for entry in self.entries:
             export_entry(entry)
@@ -1079,19 +996,15 @@ class Site(object):
             index_content = self.entries[0].entry_html
         else:
             index_content = 'No entries yet!'
-        with logged_open(index_path, 'w') as f:
-            f.write(index_content.encode('utf-8'))
+        fal.write(index_path, index_content)
         archive_path = pjoin(output_path, ('archive' + EXPORT_HTML_EXT))
-        with logged_open(archive_path, 'w') as f:
-            f.write(self.entries.rendered_html.encode('utf-8'))
+        fal.write(archive_path, self.entries.rendered_html)
 
         # output feeds
         rss_path = pjoin(output_path, RSS_FEED_FILENAME)
-        with logged_open(rss_path, 'w') as f:
-            f.write(self.entries.rendered_rss_feed.encode('utf-8'))
+        fal.write(rss_path, self.entries.rendered_rss_feed)
         atom_path = pjoin(output_path, ATOM_FEED_FILENAME)
-        with logged_open(atom_path, 'w') as f:
-            f.write(self.entries.rendered_atom_feed.encode('utf-8'))
+        fal.write(atom_path, self.entries.rendered_atom_feed)
 
         for tag, entry_list in self.tag_map.items():
             tag_path = pjoin(output_path, entry_list.path_part)
@@ -1099,26 +1012,23 @@ class Site(object):
             rss_path = pjoin(tag_path, RSS_FEED_FILENAME)
             atom_path = pjoin(tag_path, ATOM_FEED_FILENAME)
             archive_path = pjoin(tag_path, 'index.html')
-            with logged_open(rss_path, 'w') as f:
-                f.write(entry_list.rendered_rss_feed.encode('utf-8'))
-            with logged_open(atom_path, 'w') as f:
-                f.write(entry_list.rendered_atom_feed.encode('utf-8'))
-            with logged_open(archive_path, 'w') as f:
-                f.write(entry_list.rendered_html.encode('utf-8'))
+            fal.write(rss_path, entry_list.rendered_rss_feed)
+            fal.write(atom_path, entry_list.rendered_atom_feed)
+            fal.write(archive_path, entry_list.rendered_html)
 
         # copy assets, i.e., all directories under the theme path
         for sdn in get_subdirectories(self.theme_path):
             cur_src_dir = pjoin(self.theme_path, sdn)
             cur_dest_dir = pjoin(output_path, sdn)
-            with chert_log.critical('copy assets {src} to {dest}',
-                                    src=cur_src_dir, dest=cur_dest_dir):
+            with chlog.critical('copy assets {src} to {dest}',
+                                src=cur_src_dir, dest=cur_dest_dir):
                 copytree(cur_src_dir, cur_dest_dir)
 
         # optionally symlink the uploads directory.  this is an
         # important step for sites with uploads because Chert's
         # default rsync behavior picks up on these uploads by
         # following the symlink.
-        with chert_log.critical('link uploads directory') as rec:
+        with chlog.critical('link uploads directory') as rec:
             uploads_link_path = pjoin(output_path, 'uploads')
             if not os.path.isdir(self.uploads_path):
                 rec.failure('no uploads directory at {}', self.uploads_path)
@@ -1164,7 +1074,7 @@ class Site(object):
             if serving:
                 print 'Changed %s files, regenerating...' % len(changed)
                 server.shutdown()
-            with chert_log.critical('site generation', reraise=False):
+            with chlog.critical('site generation', reraise=False):
                 self.process()
             print 'Serving from %s' % output_path
             os.chdir(abspath(output_path))
@@ -1178,7 +1088,7 @@ class Site(object):
         # TODO: hook(s)?
         return
 
-    @rec_dec(chert_log.critical('publish site'), 'log_rec')
+    @rec_dec(chlog.critical('publish site'), 'log_rec')
     def publish(self, log_rec):  # deploy?
         #self._load_custom_mod()
         #self._call_custom_hook('pre_publish')
@@ -1339,7 +1249,7 @@ def main():
     action = kwargs['action']
 
     if action == 'init':
-        with chert_log.critical('init action'):
+        with chlog.critical('init action'):
             target_dir = abspath(kwargs['target_dir'])
             if os.path.exists(target_dir):
                 raise RuntimeError('chert init failed, path already exists: %s'
@@ -1354,7 +1264,7 @@ def main():
         ch = Site(input_path, dev_mode=True)
         ch.serve()
     elif action == 'publish':
-        with chert_log.critical('publish action') as log_rec:
+        with chlog.critical('publish action') as log_rec:
             ch = Site(input_path)
             ch.process()
             success = ch.publish()
@@ -1366,11 +1276,11 @@ def main():
         print 'chert version %s' % __version__
         print '  located at: %s' % os.path.abspath(os.path.dirname(__file__))
     elif action == 'render':
-        with chert_log.critical('render action'):
+        with chlog.critical('render action'):
             ch = Site(input_path)
             ch.process()
     elif action == 'clean':
-        with chert_log.critical('clean action'):
+        with chlog.critical('clean action'):
             ch = Site(input_path)
             delete_dir_contents(ch.output_path)
             print 'Cleaned Chert output path: %s' % ch.output_path
