@@ -36,6 +36,9 @@
   * HTML
   * Text
 
+* option to auto-add target="_blank" on links (default on)
+* h1 title permalink to post
+* another HTML post processing step: pull quotes
 
 ## Format gaps
 
