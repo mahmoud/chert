@@ -37,7 +37,7 @@ from chert.utils import dt_to_dict, canonicalize_links
 from chert.version import __version__
 from chert.log import rec_dec, chert_log as chlog
 from chert.fal import ChertFAL
-
+from chert.parsers import parse_entry
 
 DEBUG = False
 if DEBUG:
@@ -139,7 +139,12 @@ class DataPart(Part):
         self['summary'] = self.get_builtin_value('summary')
         self['title'] = self.get_builtin_value('title', '')
 
-        self['title_slug'] = slugify(self['title'])
+        custom_slug = self.get_builtin_value('title_slug', '')
+        title_slug = custom_slug or slugify(self['title'])
+        if title_slug != slugify(title_slug):
+            raise ValueError('invalid custom slug: %r' % custom_slug)
+        self['title_slug'] = title_slug
+
         self['content'] = self.get_builtin_value('content')
         self['tags'] = self.get_builtin_value('tags', [])
         self.load_date()
@@ -289,7 +294,13 @@ class Entry(object):
 
     @property
     def entry_id(self):
-        return self.headers.get('entry_id') or slugify(self.title)
+        entry_id = self.headers.get('entry_id')
+        if entry_id is None:
+            entry_id = slugify(self.title)
+        else:
+            if not entry_id or entry_id != slugify(entry_id):
+                raise ValueError('invalid custom entry_id: %r' % entry_id)
+        return entry_id
 
     @property
     def output_filename(self):
@@ -347,12 +358,13 @@ class Entry(object):
     def _load_parts(self):
         """Loads each part to a standardized dictionary format suitable for
         rendering.
+
+        di = data index, dci = consecutive data index, pi = part index
+        di and pi always increase. dci resets at every text element.
+        text parts have no data indices (di and dci).
         """
         self.loaded_parts = lps = []
 
-        # i = data index, ci = consecutive data index, pi = part index
-        # i and pi always increase. ci resets at every text element.
-        # text parts have no data indices (i and ci).
         di, dci = 1, 1
         for pi, part in enumerate(self.parts, start=1):
             cur = {}
@@ -376,39 +388,7 @@ class Entry(object):
         #   * how can a user explicitly delineate a YAML vs MD section
         #   * if no source_file, write out source_text to under_title.md
         #     (or something)
-        # TODO: support a list entry type that is just one YAML
-        parts = []
-        # TODO change to regex with linestart, not line ending
-        tokens = _part_sep_re.split(string)
-        was_yaml = True
-        for i, t in enumerate(tokens):
-            if not t:
-                continue
-            # TODO: pull out part metadata:  "#<!--{}-->"
-            try:
-                item = omd_load(t)
-                if isinstance(item, str):
-                    raise StringLoaded()
-                elif not isinstance(item, dict):
-                    raise StringLoaded()
-                was_yaml = True
-                if item:
-                    parts.append(item)
-            except (StringLoaded, yaml.YAMLError):
-                if i == 0:
-                    raise ValueError('entry header section expected a valid '
-                                     'YAML dictionary')
-                t = t.decode('utf-8')  # TODO: YAML doesn't decode to utf-8?
-                if not was_yaml:
-                    # if between two markdown parts, assume the divider is
-                    # part of content and put it back.
-                    parts[-1] = '---\n'.join([parts[-1], t])
-                    continue
-                else:
-                    was_yaml = False
-                    if t:
-                        parts.append(t)
-        headers, parts = parts[0], parts[1:]
+        headers, parts = parse_entry(string, **kwargs)
         return cls.from_dict({'headers': headers, 'parts': parts}, **kwargs)
 
     def __repr__(self):
