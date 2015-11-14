@@ -42,7 +42,7 @@ def parse_entry(string, **kwargs):
     return headers, parts
 
 
-class StringLoaded(object):
+class StringLoaded(Exception):
     pass
 
 
@@ -54,6 +54,8 @@ def parse_entry_parts(headers, body, **kwargs):
         # TODO: pull out part metadata:  "#<!--{}-->"
         try:
             item = omd_load(t)
+            if item is None:
+                continue
             if isinstance(item, str):
                 raise StringLoaded()
             if not isinstance(item, dict):
