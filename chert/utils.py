@@ -26,7 +26,7 @@ def canonicalize_links(text, domain, filename):
         ret += '='
         ret += mdict['quote']
         ret += domain
-        if relpath[0] == '#':
+        if relpath and relpath[0] == '#':
             ret += '/'
             ret += filename
         ret += relpath
