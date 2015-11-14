@@ -293,18 +293,24 @@ class Entry(object):
         return self.headers['title']
 
     @property
-    def entry_id(self):
-        entry_id = self.headers.get('entry_id')
-        if entry_id is None:
-            entry_id = slugify(self.title)
-        else:
-            if not entry_id or entry_id != slugify(entry_id):
-                raise ValueError('invalid custom entry_id: %r' % entry_id)
-        return entry_id
+    def entry_root(self):
+        entry_root = self.headers.get('entry_root', '')
+        entry_base_path, entry_base_name = os.path.split(entry_root)
+
+        if not entry_base_name:
+            entry_base_name = slugify(self.title)
+        elif entry_base_name != slugify(entry_base_name):
+            raise ValueError('invalid custom entry_root: %r' % entry_base_name)
+
+        entry_base_path = entry_base_path.strip('/')
+        if entry_base_path:
+            entry_base_path += '/'
+
+        return entry_base_path + entry_base_name
 
     @property
     def output_filename(self):
-        return self.entry_id + EXPORT_HTML_EXT
+        return self.entry_root + EXPORT_HTML_EXT
 
     @property
     def is_special(self):
@@ -402,7 +408,7 @@ class Entry(object):
     def to_dict(self, with_links=False):
         ret = dict(headers=self.headers,
                    parts=self.parts,
-                   entry_id=self.entry_id,
+                   entry_root=self.entry_root,
                    output_filename=self.output_filename)
 
         attrs = ('rendered_md', 'entry_html', 'loaded_parts', 'summary',
@@ -825,7 +831,7 @@ class Site(object):
     def validate(self):
         self._call_custom_hook('pre_validate')
         dup_id_map = {}
-        eid_map = OMD([(e.entry_id, e) for e in self.entries])
+        eid_map = OMD([(e.entry_root, e) for e in self.entries])
         for eid in eid_map:
             elist = eid_map.getlist(eid)
             if len(elist) > 1:
@@ -943,11 +949,14 @@ class Site(object):
             mkdir_p(output_path)
 
         def export_entry(entry):
-            entry_src_fn = entry.entry_id + EXPORT_SRC_EXT
-            entry_html_fn = entry.entry_id + EXPORT_HTML_EXT
-            entry_gen_md_fn = entry.entry_id + '.gen.md'
-            entry_data_fn = entry.entry_id + '.json'
-            src_output_path = pjoin(output_path, entry_src_fn)
+            entry_custom_base_path = os.path.split(entry.entry_root)[0]
+            if entry_custom_base_path:
+                mkdir_p(pjoin(output_path, entry_custom_base_path))
+            er = entry.entry_root
+            entry_html_fn = er + EXPORT_HTML_EXT
+            entry_gen_md_fn = er + '.gen.md'
+            entry_data_fn = er + '.json'
+
             html_output_path = pjoin(output_path, entry_html_fn)
             data_output_path = pjoin(output_path, entry_data_fn)
             gen_md_output_path = pjoin(output_path, entry_gen_md_fn)

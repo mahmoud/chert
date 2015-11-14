@@ -1,7 +1,6 @@
 
 import re
 
-
 _rel_link_re = re.compile(r'(?P<attribute>src|href)'
                           r'='
                           r'(?P<quote>[\'"])'

@@ -11,7 +11,7 @@
       {entry.content_html|s}
   </div>
   <div class="twelve columns metadata-div">
-    <a href="/{entry_id}{site.export_html_ext}" title="{publish_timestamp_local}" class="post-timestamp">{headers.publish_date}</a>
+    <a href="/{entry_root}{site.export_html_ext}" title="{publish_timestamp_local}" class="post-timestamp">{headers.publish_date}</a>
     {?headers.tags}
     <span class="tags">
       {#headers.tags}<a href="/tagged/{.}">#{.}</a> {/headers.tags}
@@ -22,7 +22,7 @@
   <div class="twelve columns" id="previously-div">
     <h5>Previously</h5>
     {#prev_entries}
-    <a href="/{.entry_id}{site.export_html_ext}">{.headers.title}</a><br/>
+    <a href="/{.entry_root}{site.export_html_ext}">{.headers.title}</a><br/>
     {/prev_entries}
   </div>
   {/prev_entries}

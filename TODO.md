@@ -40,11 +40,6 @@
 * h1 title permalink to post
 * another HTML post processing step: pull quotes
 
-* separate `entry_path` header, to determine where to put the entry in
-  the output. by default it's `/` resulting in
-  `{basepath}/{entry_id}.{ext}`
-    * TODO: take into account source directory?
-
 ## Format gaps
 
 * Perhaps over-Postel-ian (liberal in what it accepts)
