@@ -1054,7 +1054,7 @@ class Site(object):
             if serving:
                 print 'Changed %s files, regenerating...' % len(changed)
                 server.shutdown()
-            with chlog.critical('site generation', reraise=False):
+            with chlog.critical('site generation', reraise=True):
                 self.process()
             print 'Serving from %s' % output_path
             os.chdir(abspath(output_path))
