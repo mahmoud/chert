@@ -184,17 +184,17 @@ div.toc {
     /*padding: 0.5rem 0.7rem 0 0.7rem;*/
     border-left: 5px solid #E1E1E1;
     padding: 0.3rem 0 0 1rem;
-    display: inline-block;
+    /*display: inline-block;*/
     margin-bottom: 1rem;
 }
 
 /* I found Skeleton's default heading sizes too large for my liking */
 h1 {font-size: 3.5rem;}
-h2 {font-size: 2.5rem;}
-h3 {font-size: 2rem;}
-h4 {font-size: 1.75rem;}
-h5 {font-size: 1.6rem; font-weight: bold;}
-h6 {font-size: 1.5rem; text-decoration: underline;}
+h2 {font-size: 2.7rem;}
+h3 {font-size: 2.3rem;}
+h4 {font-size: 2.0rem;}
+h5 {font-size: 1.7rem; font-weight: bold;}
+h6 {font-size: 1.6rem; text-decoration: underline;}
 
 /* Similarly, the lists are spacey and not indented enough */
 li {
