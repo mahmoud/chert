@@ -40,9 +40,12 @@
 * h1 title permalink to post
 * another HTML post processing step: pull quotes
 
+* BUG: blank body autosummarize failure
+
 ## Format gaps
 
 * Perhaps over-Postel-ian (liberal in what it accepts)
 * Parsing is simple enough, but not standard
 * python-markdown requires exact indents of 4 spaces for nested lists
 * YAML requires block text to have "|"  (e.g., my_text: | <block text>)
+* if content only consists of headings, will parse as yaml
