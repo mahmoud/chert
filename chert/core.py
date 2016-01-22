@@ -35,7 +35,7 @@ from hematite.url import URL
 from chert.toc import add_toc
 from chert.utils import dt_to_dict, canonicalize_links
 from chert.version import __version__
-from chert.log import rec_dec, chert_log as chlog
+from chert.log import chert_log as chlog
 from chert.fal import ChertFAL
 from chert.parsers import parse_entry
 
@@ -280,9 +280,9 @@ class Entry(object):
         self.changelog = []  # TODO.
         self.last_edit_date = []
 
-        #no_punct = _punct_re.sub('', self.content)
-        #self.word_count = len(no_punct.split())
-        #self.reading_time = self.word_count / READING_WPM
+        # no_punct = _punct_re.sub('', self.content)
+        # self.word_count = len(no_punct.split())
+        # self.reading_time = self.word_count / READING_WPM
 
         self.summary = self.headers.get('summary')
         self._load_mappings()
@@ -299,8 +299,8 @@ class Entry(object):
 
         if not entry_base_name:
             entry_base_name = slugify(self.title)
-        elif entry_base_name != slugify(entry_base_name):
-            raise ValueError('invalid custom entry_root: %r' % entry_base_name)
+        elif entry_base_name.lower() != slugify(entry_base_name):
+            raise ValueError('invalid custom entry_root: %r' % entry_root)
 
         entry_base_path = entry_base_path.strip('/')
         if entry_base_path:
@@ -764,7 +764,7 @@ class Site(object):
             hook_func(self)
         return
 
-    @rec_dec(chlog.critical('load site'))
+    @chlog.wrap('load site', 'critical')
     def load(self):
         self.last_load = time.time()
         self._load_custom_mod()
@@ -827,7 +827,7 @@ class Site(object):
         for tag, entry_list in self.tag_map.items():
             entry_list.sort()
 
-    @rec_dec(chlog.critical('validate site'))
+    @chlog.wrap('validate site', 'critical')
     def validate(self):
         self._call_custom_hook('pre_validate')
         dup_id_map = {}
@@ -842,7 +842,7 @@ class Site(object):
 
         # TODO: assert necessary templates are present (entry.html, etc.)
 
-    @rec_dec(chlog.critical('render site'))
+    @chlog.wrap('render site', 'critical')
     def render(self):
         self._call_custom_hook('pre_render')
         entries = self.entries
@@ -928,7 +928,7 @@ class Site(object):
 
         self._call_custom_hook('post_render')
 
-    @rec_dec(chlog.critical('audit site'))
+    @chlog.wrap('audit site', 'critical')
     def audit(self):
         """
         Validation of rendered content, to be used for link checking.
@@ -939,7 +939,7 @@ class Site(object):
         self._call_custom_hook('pre_audit')
         self._call_custom_hook('post_audit')
 
-    @rec_dec(chlog.critical('export site'))
+    @chlog.wrap('export site', 'critical')
     def export(self):
         fal = self.fal
         self._call_custom_hook('pre_export')
@@ -1077,8 +1077,10 @@ class Site(object):
         # TODO: hook(s)?
         return
 
-    @rec_dec(chlog.critical('publish site'), 'log_rec')
+    @chlog.wrap('publish site', 'critical', inject_as='log_rec')
     def publish(self, log_rec):  # deploy?
+        import pdb;pdb.set_trace()
+        return
         #self._load_custom_mod()
         #self._call_custom_hook('pre_publish')
         prod_config = self.get_config('prod')
@@ -1131,6 +1133,7 @@ def get_subdirectories(path):
 
 
 def to_timestamp(dt_obj, to_utc=False):
+    # TODO: RFC822: email.Utils.formatdate(time.mktime(dt.timetuple()))
     if to_utc and dt_obj.tzinfo:
         dt_obj = dt_obj.astimezone(UTC)
     if dt_obj.tzinfo in (UTC, None):
