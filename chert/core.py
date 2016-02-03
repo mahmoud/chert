@@ -764,7 +764,7 @@ class Site(object):
             hook_func(self)
         return
 
-    @chlog.wrap('load site', 'critical')
+    @chlog.wrap('critical', 'load site')
     def load(self):
         self.last_load = time.time()
         self._load_custom_mod()
@@ -827,7 +827,7 @@ class Site(object):
         for tag, entry_list in self.tag_map.items():
             entry_list.sort()
 
-    @chlog.wrap('validate site', 'critical')
+    @chlog.wrap('critical', 'validate site')
     def validate(self):
         self._call_custom_hook('pre_validate')
         dup_id_map = {}
@@ -842,7 +842,7 @@ class Site(object):
 
         # TODO: assert necessary templates are present (entry.html, etc.)
 
-    @chlog.wrap('render site', 'critical')
+    @chlog.wrap('critical', 'render site')
     def render(self):
         self._call_custom_hook('pre_render')
         entries = self.entries
@@ -928,7 +928,7 @@ class Site(object):
 
         self._call_custom_hook('post_render')
 
-    @chlog.wrap('audit site', 'critical')
+    @chlog.wrap('critical', 'audit site')
     def audit(self):
         """
         Validation of rendered content, to be used for link checking.
@@ -939,7 +939,7 @@ class Site(object):
         self._call_custom_hook('pre_audit')
         self._call_custom_hook('post_audit')
 
-    @chlog.wrap('export site', 'critical')
+    @chlog.wrap('critical', 'export site')
     def export(self):
         fal = self.fal
         self._call_custom_hook('pre_export')
@@ -1077,10 +1077,8 @@ class Site(object):
         # TODO: hook(s)?
         return
 
-    @chlog.wrap('publish site', 'critical', inject_as='log_rec')
+    @chlog.wrap('critical', 'publish site', inject_as='log_rec')
     def publish(self, log_rec):  # deploy?
-        import pdb;pdb.set_trace()
-        return
         #self._load_custom_mod()
         #self._call_custom_hook('pre_publish')
         prod_config = self.get_config('prod')
