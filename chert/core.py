@@ -277,12 +277,8 @@ class Entry(object):
                 pub_dt = pub_dt.replace(tzinfo=LocalTZ)
         self.publish_date = pub_dt
 
-        self.changelog = []  # TODO.
+        self.changelog = []  # TODO
         self.last_edit_date = []
-
-        # no_punct = _punct_re.sub('', self.content)
-        # self.word_count = len(no_punct.split())
-        # self.reading_time = self.word_count / READING_WPM
 
         self.summary = self.headers.get('summary')
         self._load_mappings()
@@ -347,6 +343,16 @@ class Entry(object):
         ret = cls.from_string(bytestring,
                               source_path=in_path)
         return ret
+
+    def get_word_count(self):
+        # TODO
+        str_parts = [p for p in self.parts if isinstance(p, basestring)]
+        content = ' '.join(str_parts)
+        no_punct = _punct_re.sub('', content)
+        return len(no_punct.split())
+
+    def get_reading_time(self, rate=READING_WPM):
+        return self.get_word_count() / float(rate)
 
     def _load_mappings(self):
         # a little like role->field map, but this strikes me as a more
@@ -781,6 +787,7 @@ class Site(object):
         entry_paths = []
         for entry_path in iter_find_files(entries_path, ENTRY_PATS):
             entry_paths.append(entry_path)
+        entry_paths.sort()
         for ep in entry_paths:
             with chlog.info('entry load') as rec:
                 try:
@@ -793,7 +800,9 @@ class Site(object):
                     continue
                 else:
                     rec['entry_title'] = entry.title
-                    rec.success('entry load succeeded: {entry_title}')
+                    rec['entry_length'] = round(entry.get_reading_time(), 1)
+                    rec.success('entry load succeeded: {entry_title}'
+                                ' ({entry_length}m)')
             if entry.is_draft:
                 self.draft_entries.append(entry)
             elif entry.is_special:
