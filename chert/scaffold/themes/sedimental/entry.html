@@ -7,7 +7,10 @@
 {#entry}
 <div class="row">
   <div class="twelve columns entry-div">
-    <h1>{headers.title}</h1>
+    <header id="entry-header">
+      <h1 id="entry-h1">{headers.title}</h1>
+      <p id="entry-tagline">{headers.tagline}</p>
+    </header>
       {entry.content_html|s}
   </div>
   <div class="twelve columns metadata-div">

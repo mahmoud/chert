@@ -54,6 +54,18 @@
     margin-right: 5px;
 }
 
+#entry-header {
+    margin-bottom: 20px;
+}
+
+#entry-h1 {
+    margin-bottom: 5px;
+}
+
+#entry-tagline {
+    font-style: italic;
+}
+
 dt {
     font-weight: bold;
 }
