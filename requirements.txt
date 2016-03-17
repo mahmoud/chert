@@ -1,5 +1,5 @@
 -e git+git@github.com:mahmoud/ashes.git@029eb56da35ad71d505442575dba782f6b912b89#egg=ashes-master
-boltons==15.0.1
+boltons==16.1.1
 -e git+git@github.com:mahmoud/chert.git@01977b6930944de8d20e14ed3db4558c2d12c9af#egg=chert-parts_format
 cov-core==1.7
 coverage==3.7.1
