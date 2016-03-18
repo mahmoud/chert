@@ -10,12 +10,12 @@ from lithoxyl import (Logger,
 from lithoxyl.filters import ThresholdFilter
 from lithoxyl.sinks import DevDebugSink
 
+# import lithoxyl; lithoxyl.get_context().enable_async()
 
 chert_log = Logger('chert')
-# TODO: duration_s, duration_ms, duration_us
-' - {duration_ms:>8.3f}ms'
+
 fmt = ('{status_char}+{import_delta_s}'
-       ' - {duration_auto}'
+       ' - {duration_ms:>8.3f}ms'
        ' - {parent_depth_indent}{end_message}')
 
 stderr_fmtr = SensibleFormatter(fmt)
