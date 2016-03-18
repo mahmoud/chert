@@ -2,15 +2,23 @@
 
 import os
 
-from lithoxyl import Logger, SensibleSink, Formatter, StreamEmitter
+from lithoxyl import (Logger,
+                      StreamEmitter,
+                      SensibleSink,
+                      SensibleFormatter)
+
 from lithoxyl.filters import ThresholdFilter
 from lithoxyl.sinks import DevDebugSink
 
 
 chert_log = Logger('chert')
 # TODO: duration_s, duration_ms, duration_us
-fmt = '{status_char}+{import_delta} - {duration_msecs}ms - {end_message}'
-stderr_fmtr = Formatter(fmt)
+' - {duration_ms:>8.3f}ms'
+fmt = ('{status_char}+{import_delta_s}'
+       ' - {duration_auto}'
+       ' - {parent_depth_indent}{end_message}')
+
+stderr_fmtr = SensibleFormatter(fmt)
 stderr_emtr = StreamEmitter('stderr')
 stderr_filter = ThresholdFilter(success='info',
                                 failure='debug',

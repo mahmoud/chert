@@ -30,7 +30,7 @@ setup(name='chert',
                         'Pygments==1.6',
                         'python-dateutil==2.2',
                         'PyYAML==3.11',
-                        'lithoxyl==0.2.1',
+                        'lithoxyl==0.2.2dev',
                         'html5lib==0.999999'],
       classifiers=[
           'Development Status :: 3 - Alpha',
