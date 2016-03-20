@@ -5,9 +5,9 @@ import os
 from lithoxyl import (Logger,
                       StreamEmitter,
                       SensibleSink,
+                      SensibleFilter,
                       SensibleFormatter)
 
-from lithoxyl.filters import ThresholdFilter
 from lithoxyl.sinks import DevDebugSink
 
 # import lithoxyl; lithoxyl.get_context().enable_async()
@@ -20,9 +20,9 @@ fmt = ('{status_char}+{import_delta_s}'
 
 stderr_fmtr = SensibleFormatter(fmt)
 stderr_emtr = StreamEmitter('stderr')
-stderr_filter = ThresholdFilter(success='info',
-                                failure='debug',
-                                exception='debug')
+stderr_filter = SensibleFilter(success='info',
+                               failure='debug',
+                               exception='debug')
 stderr_sink = SensibleSink(formatter=stderr_fmtr,
                            emitter=stderr_emtr,
                            filters=[stderr_filter])
@@ -33,9 +33,9 @@ try:
 except Exception:
     pass
 else:
-    syslog_filter = ThresholdFilter(success='critical',
-                                    failure='critical',
-                                    exception='critical')
+    syslog_filter = SensibleFilter(success='critical',
+                                   failure='critical',
+                                   exception='critical')
     syslog_emt = SyslogEmitter('chert')
     syslog_sink = SensibleSink(formatter=stderr_fmtr,
                                emitter=syslog_emt,
