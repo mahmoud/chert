@@ -596,7 +596,7 @@ class Site(object):
             required: raise an error if path does not exist
         """
         with chlog.debug('set {path_name} path to {path_val}',
-                             path_name=name, path_val=path) as rec:
+                         path_name=name, path_val=path) as rec:
             self._paths[name] = path
             if path:
                 self.paths[name] = abspath(path)
@@ -801,8 +801,8 @@ class Site(object):
                 else:
                     rec['entry_title'] = entry.title
                     rec['entry_length'] = round(entry.get_reading_time(), 1)
-                    rec.success('entry load succeeded: {entry_title}'
-                                ' ({entry_length}m)')
+                    rec.success('entry loaded:'
+                                ' {entry_title} ({entry_length}m)')
             if entry.is_draft:
                 self.draft_entries.append(entry)
             elif entry.is_special:
@@ -851,7 +851,7 @@ class Site(object):
 
         # TODO: assert necessary templates are present (entry.html, etc.)
 
-    @chlog.wrap('critical', 'render site')
+    @chlog.wrap('critical', 'render site', verbose=True)
     def render(self):
         self._call_custom_hook('pre_render')
         entries = self.entries
@@ -911,13 +911,13 @@ class Site(object):
             entry.entry_html = entry_html
             return
 
-        with chlog.info('render published entry content'):
+        with chlog.info('render published entry content', verbose=True):
             for entry in entries:
                 render_parts(entry)
-        with chlog.info('render draft entry content'):
+        with chlog.info('render draft entry content', verbose=True):
             for entry in self.draft_entries:
                 render_parts(entry)
-        with chlog.info('render special entry content'):
+        with chlog.info('render special entry content', verbose=True):
             for entry in self.special_entries:
                 render_parts(entry)
 

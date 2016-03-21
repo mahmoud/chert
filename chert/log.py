@@ -18,7 +18,12 @@ fmt = ('{status_char}+{import_delta_s}'
        ' - {duration_ms:>8.3f}ms'
        ' - {parent_depth_indent}{end_message}')
 
-stderr_fmtr = SensibleFormatter(fmt)
+begin_fmt = ('{status_char}+{import_delta_s}'
+             ' --------------'
+             ' {parent_depth_indent}{begin_message}')
+
+stderr_fmtr = SensibleFormatter(fmt,
+                                begin=begin_fmt)
 stderr_emtr = StreamEmitter('stderr')
 stderr_filter = SensibleFilter(success='info',
                                failure='debug',
