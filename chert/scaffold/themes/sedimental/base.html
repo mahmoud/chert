@@ -62,7 +62,7 @@
             </p>{/site.primary_links}
             {?site.secondary_links}<p id="sec-links-p">
             {#site.secondary_links}
-              <a {?is_external} target="_blank"{/is_external} title="{.desc}" href="{.href}">{.text}</a>
+              <a {?is_external} target="_blank"{/is_external} title="{.desc}" href="{.href}">{.text}</a>&nbsp;
             {/site.secondary_links}
             </p>{/site.secondary_links}
             <hr>
