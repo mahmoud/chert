@@ -734,6 +734,12 @@ class Site(object):
     def output_path(self):
         return self.paths['output_path']
 
+    @property
+    def all_entries(self):
+        return (self.special_entries.entries
+                + self.entries.entries
+                + self.draft_entries.entries)
+
     def process(self):
         if self.last_load:
             self.reload_config()
@@ -1016,11 +1022,10 @@ class Site(object):
 
         # copy assets, i.e., all directories under the theme path
         for sdn in get_subdirectories(self.theme_path):
-            cur_src_dir = pjoin(self.theme_path, sdn)
-            cur_dest_dir = pjoin(output_path, sdn)
-            with chlog.critical('copy assets {src} to {dest}',
-                                src=cur_src_dir, dest=cur_dest_dir):
-                copytree(cur_src_dir, cur_dest_dir)
+            cur_src = pjoin(self.theme_path, sdn)
+            cur_dest = pjoin(output_path, sdn)
+            with chlog.critical('copy assets', src=cur_src, dest=cur_dest):
+                copytree(cur_src, cur_dest)
 
         # optionally symlink the uploads directory.  this is an
         # important step for sites with uploads because Chert's
