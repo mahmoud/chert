@@ -62,7 +62,8 @@ READING_WPM = 200.0
 
 BASE_MD_EXTENSIONS = ['markdown.extensions.def_list',
                       'markdown.extensions.footnotes',
-                      'markdown.extensions.fenced_code']
+                      'markdown.extensions.fenced_code',
+                      'markdown.extensions.tables']
 _HILITE = CodeHiliteExtension()
 _TOC_EXTENSION = TocExtension(title='Contents', anchorlink=True, baselevel=2)
 # baselevel is actually really useful for Chert regardless of TOC usage
@@ -887,7 +888,8 @@ class Site(object):
                 part['content_ihtml'] = markdown2ihtml(part['content'],
                                                        entry.output_filename)
             if not entry.summary:
-                entry.summary = entry._autosummarize()
+                with chlog.debug('autosummarizing', reraise=False):
+                    entry.summary = entry._autosummarize()
 
             tmpl_name = entry.entry_layout + MD_LAYOUT_EXT
             render_ctx = {'entry': entry.to_dict(with_links=False),
