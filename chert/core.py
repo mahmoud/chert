@@ -62,7 +62,8 @@ READING_WPM = 200.0
 
 BASE_MD_EXTENSIONS = ['markdown.extensions.def_list',
                       'markdown.extensions.footnotes',
-                      'markdown.extensions.fenced_code']
+                      'markdown.extensions.fenced_code',
+                      'markdown.extensions.tables']
 _HILITE = CodeHiliteExtension()
 _TOC_EXTENSION = TocExtension(title='Contents', anchorlink=True, baselevel=2)
 # baselevel is actually really useful for Chert regardless of TOC usage
@@ -596,7 +597,7 @@ class Site(object):
             required: raise an error if path does not exist
         """
         with chlog.debug('set {path_name} path to {path_val}',
-                             path_name=name, path_val=path) as rec:
+                         path_name=name, path_val=path) as rec:
             self._paths[name] = path
             if path:
                 self.paths[name] = abspath(path)
@@ -685,7 +686,7 @@ class Site(object):
         return ret
 
     def _get_analytics_code(self):
-        with chlog.info('set analytics code') as rec:
+        with chlog.debug('set analytics code') as rec:
             code = self.get_config('site', 'analytics_code', None)
             if code is None:
                 rec.failure('site.analytics_code not set in config.yaml')
@@ -733,6 +734,12 @@ class Site(object):
     @property
     def output_path(self):
         return self.paths['output_path']
+
+    @property
+    def all_entries(self):
+        return (self.special_entries.entries
+                + self.entries.entries
+                + self.draft_entries.entries)
 
     def process(self):
         if self.last_load:
@@ -801,8 +808,8 @@ class Site(object):
                 else:
                     rec['entry_title'] = entry.title
                     rec['entry_length'] = round(entry.get_reading_time(), 1)
-                    rec.success('entry load succeeded: {entry_title}'
-                                ' ({entry_length}m)')
+                    rec.success('entry loaded:'
+                                ' {entry_title} ({entry_length}m)')
             if entry.is_draft:
                 self.draft_entries.append(entry)
             elif entry.is_special:
@@ -851,7 +858,7 @@ class Site(object):
 
         # TODO: assert necessary templates are present (entry.html, etc.)
 
-    @chlog.wrap('critical', 'render site')
+    @chlog.wrap('critical', 'render site', verbose=True)
     def render(self):
         self._call_custom_hook('pre_render')
         entries = self.entries
@@ -881,7 +888,8 @@ class Site(object):
                 part['content_ihtml'] = markdown2ihtml(part['content'],
                                                        entry.output_filename)
             if not entry.summary:
-                entry.summary = entry._autosummarize()
+                with chlog.debug('autosummarizing', reraise=False):
+                    entry.summary = entry._autosummarize()
 
             tmpl_name = entry.entry_layout + MD_LAYOUT_EXT
             render_ctx = {'entry': entry.to_dict(with_links=False),
@@ -911,13 +919,13 @@ class Site(object):
             entry.entry_html = entry_html
             return
 
-        with chlog.info('render published entry content'):
+        with chlog.info('render published entry content', verbose=True):
             for entry in entries:
                 render_parts(entry)
-        with chlog.info('render draft entry content'):
+        with chlog.info('render draft entry content', verbose=True):
             for entry in self.draft_entries:
                 render_parts(entry)
-        with chlog.info('render special entry content'):
+        with chlog.info('render special entry content', verbose=True):
             for entry in self.special_entries:
                 render_parts(entry)
 
@@ -1016,11 +1024,10 @@ class Site(object):
 
         # copy assets, i.e., all directories under the theme path
         for sdn in get_subdirectories(self.theme_path):
-            cur_src_dir = pjoin(self.theme_path, sdn)
-            cur_dest_dir = pjoin(output_path, sdn)
-            with chlog.critical('copy assets {src} to {dest}',
-                                src=cur_src_dir, dest=cur_dest_dir):
-                copytree(cur_src_dir, cur_dest_dir)
+            cur_src = pjoin(self.theme_path, sdn)
+            cur_dest = pjoin(output_path, sdn)
+            with chlog.critical('copy assets', src=cur_src, dest=cur_dest):
+                copytree(cur_src, cur_dest)
 
         # optionally symlink the uploads directory.  this is an
         # important step for sites with uploads because Chert's

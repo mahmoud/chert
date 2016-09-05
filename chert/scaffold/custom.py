@@ -20,7 +20,7 @@ def chert_pre_audit(chert_obj):
 def _autotag_entries(chert_obj):
     # called by post_load
     for entry in chert_obj.entries:
-        rel_path = os.path.relpath(entry.input_path, chert_obj.entries_path)
+        rel_path = os.path.relpath(entry.source_path, chert_obj.entries_path)
         rel_path, entry_filename = os.path.split(rel_path)
         new_tags = [p.strip() for p in rel_path.split('/') if p.split()]
         for tag in new_tags:

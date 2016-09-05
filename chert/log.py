@@ -2,19 +2,32 @@
 
 import os
 
-from lithoxyl import Logger, SensibleSink, Formatter, StreamEmitter
-from lithoxyl.filters import ThresholdFilter
+from lithoxyl import (Logger,
+                      StreamEmitter,
+                      SensibleSink,
+                      SensibleFilter,
+                      SensibleFormatter)
+
 from lithoxyl.sinks import DevDebugSink
 
+# import lithoxyl; lithoxyl.get_context().enable_async()
 
 chert_log = Logger('chert')
-# TODO: duration_s, duration_ms, duration_us
-fmt = '{status_char}+{import_delta} - {duration_msecs}ms - {end_message}'
-stderr_fmtr = Formatter(fmt)
+
+fmt = ('{status_char}+{import_delta_s}'
+       ' - {duration_ms:>8.3f}ms'
+       ' - {parent_depth_indent}{end_message}')
+
+begin_fmt = ('{status_char}+{import_delta_s}'
+             ' --------------'
+             ' {parent_depth_indent}{begin_message}')
+
+stderr_fmtr = SensibleFormatter(fmt,
+                                begin=begin_fmt)
 stderr_emtr = StreamEmitter('stderr')
-stderr_filter = ThresholdFilter(success='info',
-                                failure='debug',
-                                exception='debug')
+stderr_filter = SensibleFilter(success='info',
+                               failure='debug',
+                               exception='debug')
 stderr_sink = SensibleSink(formatter=stderr_fmtr,
                            emitter=stderr_emtr,
                            filters=[stderr_filter])
@@ -25,9 +38,9 @@ try:
 except Exception:
     pass
 else:
-    syslog_filter = ThresholdFilter(success='critical',
-                                    failure='critical',
-                                    exception='critical')
+    syslog_filter = SensibleFilter(success='critical',
+                                   failure='critical',
+                                   exception='critical')
     syslog_emt = SyslogEmitter('chert')
     syslog_sink = SensibleSink(formatter=stderr_fmtr,
                                emitter=syslog_emt,
@@ -36,7 +49,7 @@ else:
         chert_log.add_sink(syslog_sink)
 
 
-chert_log.add_sink(DevDebugSink(post_mortem=os.getenv('CHERT_PDB')))
+chert_log.add_sink(DevDebugSink(post_mortem=bool(os.getenv('CHERT_PDB'))))
 
 
 def _ppath(path):  # lithoxyl todo
