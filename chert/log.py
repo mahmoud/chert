@@ -49,7 +49,7 @@ else:
         chert_log.add_sink(syslog_sink)
 
 
-chert_log.add_sink(DevDebugSink(post_mortem=os.getenv('CHERT_PDB')))
+chert_log.add_sink(DevDebugSink(post_mortem=bool(os.getenv('CHERT_PDB'))))
 
 
 def _ppath(path):  # lithoxyl todo

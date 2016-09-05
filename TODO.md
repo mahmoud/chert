@@ -42,6 +42,9 @@
 
 * BUG: blank body autosummarize failure
 
+* Tag pages should have configurable descriptions for the tag as a whole
+* Posts should have "tagline", etc.
+
 ## Format gaps
 
 * Perhaps over-Postel-ian (liberal in what it accepts)

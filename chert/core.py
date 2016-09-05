@@ -686,7 +686,7 @@ class Site(object):
         return ret
 
     def _get_analytics_code(self):
-        with chlog.info('set analytics code') as rec:
+        with chlog.debug('set analytics code') as rec:
             code = self.get_config('site', 'analytics_code', None)
             if code is None:
                 rec.failure('site.analytics_code not set in config.yaml')
