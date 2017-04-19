@@ -20,17 +20,18 @@ from pipes import quote as shell_quote
 
 import yaml
 from markdown import Markdown
+from boltons.urlutils import URL
 from boltons.strutils import slugify, html2text
 from boltons.dictutils import OrderedMultiDict as OMD
 from boltons.timeutils import LocalTZ, UTC
 from boltons.fileutils import mkdir_p, copytree, iter_find_files
 from boltons.debugutils import pdb_on_signal
+
 from ashes import AshesEnv, Template
 from dateutil.parser import parse as parse_date
 from markdown.extensions.toc import TocExtension
 from markdown.extensions.codehilite import CodeHiliteExtension
 
-from hematite.url import URL
 
 from chert.toc import add_toc
 from chert.utils import dt_to_dict, canonicalize_links
