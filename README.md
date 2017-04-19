@@ -14,3 +14,4 @@ In action:
 
 * [Sedimental](http://sedimental.org) ([source](https://github.com/mahmoud/sedimental))
 * [ENOTUNIQ](http://enotuniq.org)
+* [CalVer](http://calver.org)
