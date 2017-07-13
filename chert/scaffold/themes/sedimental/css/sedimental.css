@@ -22,6 +22,11 @@
     #header {
         margin-bottom: 1.5rem;
     }
+
+    div.container {
+        padding-left: 6%;  /* 7rem;*/
+        padding-right: 8%;  /* 8rem; */
+    }
 }
 
 #header h1 {
@@ -120,7 +125,7 @@ div.footnote hr {
 }
 
 div.footnote hr:after {
-    content: "#";
+    content: "###";
     display: inline-block;
     position: relative;
     top: -1.1rem;
@@ -161,12 +166,10 @@ html, body {
     height: auto;
 }
 
-/* Uncomment this to get the same style for manual heading links as the Table of Contents autolinks
-
 h1 a, h2 a, h3 a, h4 a, h5 a {
     color: #222;
     text-decoration: none;
-}*/
+}
 
 .toclink {
     color: #222;
