@@ -29,9 +29,7 @@ from boltons.debugutils import pdb_on_signal
 
 from ashes import AshesEnv, Template
 from dateutil.parser import parse as parse_date
-from markdown.extensions.toc import TocExtension
 from markdown.extensions.codehilite import CodeHiliteExtension
-
 
 from chert.toc import add_toc
 from chert.utils import dt_to_dict, canonicalize_links
@@ -52,7 +50,7 @@ DEFAULT_CONFIG_FILENAME = 'chert.yaml'
 SITE_TITLE = 'Chert'
 SITE_HEAD_TITLE = SITE_TITLE  # goes in the head tag
 SITE_AUTHOR = 'Mahmoud Hashemi'
-SITE_COPYRIGHT = '&copy; 2015 Mahmoud Hashemi <img height="14" src="/img/by-sa.png" />'
+SITE_COPYRIGHT = '&copy; 2017 Mahmoud Hashemi <img height="14" src="/img/by-sa.png" />'
 DEFAULT_AUTOREFRESH = 4
 
 PREV_ENTRY_COUNT, NEXT_ENTRY_COUNT = 5, 5
@@ -66,9 +64,9 @@ BASE_MD_EXTENSIONS = ['markdown.extensions.def_list',
                       'markdown.extensions.fenced_code',
                       'markdown.extensions.tables']
 _HILITE = CodeHiliteExtension()
-_TOC_EXTENSION = TocExtension(title='Contents', anchorlink=True, baselevel=2)
+
 # baselevel is actually really useful for Chert regardless of TOC usage
-MD_EXTENSIONS = BASE_MD_EXTENSIONS + [_HILITE]  # , _TOC_EXTENSION]
+MD_EXTENSIONS = BASE_MD_EXTENSIONS + [_HILITE]
 _HILITE_INLINE = CodeHiliteExtension(noclasses=True,
                                      pygments_style='emacs')
 INLINE_MD_EXTENSIONS = BASE_MD_EXTENSIONS + [_HILITE_INLINE]
