@@ -33,6 +33,16 @@ def html_text_to_tree(html_text):
     return html5lib.parse(html_text, namespaceHTMLElements=False)
 
 
+def html_tree_to_text(html_tree):
+    options = {'quote_attr_values': True,
+               'use_trailing_solidus': True,
+               'space_before_trailing_solidus': True}
+    serializer = html5lib.serializer.HTMLSerializer(**options)
+    walker = html5lib.getTreeWalker('etree')
+    stream = serializer.serialize(walker(html_tree))
+    return u''.join(stream)
+
+
 def canonicalize_links(text, domain, filename):
     "turns links into canonical links for feed links"
     # does allow '..' links etc., even though they're probably errors
@@ -61,7 +71,7 @@ def canonicalize_links(text, domain, filename):
     return _rel_link_re.sub(_replace_rel_link, text)
 
 
-def add_toc(html, marker='[TOC]', title='Contents', base_header_level=1):
+def add_toc(html_tree, marker='[TOC]', title='Contents', base_header_level=1):
     """Adds a table of contents div where *marker* can be found within p
     tags on its own. Turns headings into links and optionally adjusts
     their level to be suitable for inclusion in a larger document.
@@ -72,13 +82,12 @@ def add_toc(html, marker='[TOC]', title='Contents', base_header_level=1):
     Intended to be used on the "content" (part below the post title)
     of the HTML layout of an entry.
     """
-    tocifier = TOCifier.from_html_text(html_text=html,
-                                       marker=marker,
-                                       title=title,
-                                       base_header_level=base_header_level)
+    tocifier = TOCifier(html_tree=html_tree,
+                        marker=marker,
+                        title=title,
+                        base_header_level=base_header_level)
     tocifier.process()
-    html_text = tocifier.get_html_text()
-    return html_text
+    return html_tree
 
 
 class TOCifier(object):
@@ -125,15 +134,6 @@ class TOCifier(object):
         if self.marker:
             self.replace_marker(toc_div_el)
         return
-
-    def get_html_text(self):
-        options = {'quote_attr_values': True,
-                   'use_trailing_solidus': True,
-                   'space_before_trailing_solidus': True}
-        serializer = html5lib.serializer.HTMLSerializer(**options)
-        walker = html5lib.getTreeWalker('etree')
-        stream = serializer.serialize(walker(self.root))
-        return u''.join(stream)
 
     def replace_marker(self, elem):
         ''' Replace marker with elem. '''
