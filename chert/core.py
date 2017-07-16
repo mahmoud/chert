@@ -31,8 +31,8 @@ from ashes import AshesEnv, Template
 from dateutil.parser import parse as parse_date
 from markdown.extensions.codehilite import CodeHiliteExtension
 
-from chert.toc import add_toc
-from chert.utils import dt_to_dict, canonicalize_links
+from chert import hypertext
+from chert.utils import dt_to_dict
 from chert.version import __version__
 from chert.log import chert_log as chlog
 from chert.fal import ChertFAL
@@ -65,7 +65,6 @@ BASE_MD_EXTENSIONS = ['markdown.extensions.def_list',
                       'markdown.extensions.tables']
 _HILITE = CodeHiliteExtension()
 
-# baselevel is actually really useful for Chert regardless of TOC usage
 MD_EXTENSIONS = BASE_MD_EXTENSIONS + [_HILITE]
 _HILITE_INLINE = CodeHiliteExtension(noclasses=True,
                                      pygments_style='emacs')
@@ -875,9 +874,10 @@ class Site(object):
         def markdown2ihtml(string, entry_fn):
             if not string:
                 return ''
-            ret = canonicalize_links(imdc.convert(string),
-                                     canonical_domain,
-                                     entry_fn)
+
+            ret = hypertext.canonicalize_links(imdc.convert(string),
+                                               canonical_domain,
+                                               entry_fn)
             imdc.reset()
             return ret
 
@@ -898,16 +898,18 @@ class Site(object):
             tmpl_name = entry.content_layout + HTML_LAYOUT_EXT
             content_html = self.html_renderer.render(tmpl_name, render_ctx)
             with chlog.debug('adding toc to content html'):
-                content_html = add_toc(content_html)
+                content_html = hypertext.add_toc(content_html)
             entry.content_html = content_html
 
             render_ctx['inline'] = True
             content_ihtml = self.html_renderer.render(tmpl_name, render_ctx)
             with chlog.debug('adding toc to content inline html'):
-                content_ihtml = add_toc(content_ihtml)
-            entry.content_ihtml = canonicalize_links(content_ihtml,
-                                                     canonical_domain,
-                                                     entry.output_filename)
+                content_ihtml = hypertext.add_toc(content_ihtml)
+            with chlog.debug('canonicalize_ihtml_links'):
+                content_ihtml = hypertext.canonicalize_links(content_ihtml,
+                                                             canonical_domain,
+                                                             entry.output_filename)
+                entry.content_ihtml = content_ihtml
             return
 
         def render_html(entry, with_links=False):

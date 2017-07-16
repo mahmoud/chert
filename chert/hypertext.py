@@ -11,6 +11,13 @@ import html5lib
 from boltons.strutils import slugify
 
 
+_rel_link_re = re.compile(r'(?P<attribute>src|href)'
+                          r'='
+                          r'(?P<quote>[\'"])'
+                          r'(?P<relpath>\S*)'
+                          r'(?P=quote)')
+
+
 def to_unicode(obj):
     try:
         return unicode(obj)
@@ -20,6 +27,38 @@ def to_unicode(obj):
 
 def remove_marker(text, marker='[TOC]'):
     return text.replace(marker, '', 1)
+
+
+def html_text_to_tree(html_text):
+    return html5lib.parse(html_text, namespaceHTMLElements=False)
+
+
+def canonicalize_links(text, domain, filename):
+    "turns links into canonical links for feed links"
+    # does allow '..' links etc., even though they're probably errors
+    # TODO: port to use the html_tree
+
+    def _replace_rel_link(match):
+        ret = ''
+        mdict = match.groupdict()
+        relpath = mdict['relpath']
+        # rule out already canonical URLs
+        # TODO: switch to better URL check
+        if relpath.startswith(domain) or '//' in relpath[:8]:
+            return match.group(0)
+
+        ret += mdict['attribute']
+        ret += '='
+        ret += mdict['quote']
+        ret += domain
+        if relpath and relpath[0] == '#':
+            ret += '/'
+            ret += filename
+        ret += relpath
+        ret += mdict['quote']
+        return ret
+
+    return _rel_link_re.sub(_replace_rel_link, text)
 
 
 def add_toc(html, marker='[TOC]', title='Contents', base_header_level=1):
@@ -33,10 +72,10 @@ def add_toc(html, marker='[TOC]', title='Contents', base_header_level=1):
     Intended to be used on the "content" (part below the post title)
     of the HTML layout of an entry.
     """
-    tocifier = TOCifier(html=html,
-                        marker=marker,
-                        title=title,
-                        base_header_level=base_header_level)
+    tocifier = TOCifier.from_html_text(html_text=html,
+                                       marker=marker,
+                                       title=title,
+                                       base_header_level=base_header_level)
     tocifier.process()
     html_text = tocifier.get_html_text()
     return html_text
@@ -46,16 +85,20 @@ class TOCifier(object):
     id_count_re = re.compile(r'^(.*)_([0-9]+)$')
     header_re = re.compile("[Hh][123456]")
 
-    def __init__(self, html, marker, title, base_header_level=1):
-        self.raw_html = html
+    def __init__(self, html_tree, marker, title, base_header_level=1):
+        self.html_tree = html_tree
         self.marker = marker
         self.title = title
-        self.html = to_unicode(html)
         self.base_header_level = base_header_level
         self.slugify = slugify
 
+    @classmethod
+    def from_html_text(cls, html_text, **kw):
+        html_tree = html_text_to_tree(html_text)
+        return cls(html_tree=html_tree, **kw)
+
     def process(self):
-        self.root = html5lib.parse(self.html, namespaceHTMLElements=False)
+        self.root = self.html_tree
         self.used_id_set = set()
 
         h_tokens = []
