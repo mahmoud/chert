@@ -8,6 +8,7 @@ import re
 from xml.etree import cElementTree as ET
 
 import html5lib
+from hyperlink import URL
 from boltons.strutils import slugify
 
 
@@ -69,6 +70,36 @@ def canonicalize_links(text, domain, filename):
         return ret
 
     return _rel_link_re.sub(_replace_rel_link, text)
+
+
+def retarget_links(html_tree, mode='external'):
+    if mode == 'none':
+        return
+    elif mode not in ('external', 'all'):
+        raise ValueError('expected "none", "external", or "all", not: %r'
+                         % mode)
+    for el in html_tree.iter():
+        if not isinstance(el.tag, basestring):
+            continue
+        if not el.tag == 'a':
+            continue
+        if el.get('target'):
+            continue  # let explicit settings lie
+        href = el.get('href')
+        if not href or href.startswith('#'):
+            continue
+        if mode == 'all':
+            retarget = True
+        elif mode == 'external':
+            try:
+                url = URL.from_text(href)
+            except ValueError:
+                retarget = True
+            else:
+                retarget = bool(url.host)
+        if retarget:
+            el.set('target', '_blank')
+    return
 
 
 def add_toc(html_tree, marker='[TOC]', title='Contents', base_header_level=1):

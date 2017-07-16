@@ -900,7 +900,10 @@ class Site(object):
             with chlog.debug('parse_content_html'):
                 content_html_tree = hypertext.html_text_to_tree(content_html)
             with chlog.debug('add_toc_content_html'):
-                content_html = hypertext.add_toc(content_html_tree)
+                hypertext.add_toc(content_html_tree)
+            with chlog.debug('retarget_links_content_html'):
+                _mode = self.get_config('site', 'retarget_links', 'external')
+                hypertext.retarget_links(content_html_tree, mode=_mode)
             with chlog.debug('reserialize_content_html'):
                 content_html = hypertext.html_tree_to_text(content_html_tree)
             entry.content_html = content_html
@@ -908,7 +911,7 @@ class Site(object):
             render_ctx['inline'] = True
             content_ihtml = self.html_renderer.render(tmpl_name, render_ctx)
             with chlog.debug('canonicalize_ihtml_links'):
-                # TODO: use tree (and move up)
+                # TODO: use tree (and move slightly down)
                 content_ihtml = hypertext.canonicalize_links(content_ihtml,
                                                              canonical_domain,
                                                              entry.output_filename)
