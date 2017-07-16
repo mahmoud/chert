@@ -907,16 +907,18 @@ class Site(object):
 
             render_ctx['inline'] = True
             content_ihtml = self.html_renderer.render(tmpl_name, render_ctx)
-            content_ihtml_tree = hypertext.html_text_to_tree(content_ihtml)
-            with chlog.debug('adding toc to content inline html'):
-                hypertext.add_toc(content_ihtml_tree)
-            with chlog.debug('reserialize_content_ihtml'):
-                content_ihtml = hypertext.html_tree_to_text(content_ihtml_tree)
             with chlog.debug('canonicalize_ihtml_links'):
                 # TODO: use tree (and move up)
                 content_ihtml = hypertext.canonicalize_links(content_ihtml,
                                                              canonical_domain,
                                                              entry.output_filename)
+            with chlog.debug('parse_content_ihtml'):
+                content_ihtml_tree = hypertext.html_text_to_tree(content_ihtml)
+            with chlog.debug('add_toc_content_ihtml'):
+                hypertext.add_toc(content_ihtml_tree)
+            with chlog.debug('reserialize_content_ihtml'):
+                content_ihtml = hypertext.html_tree_to_text(content_ihtml_tree)
+
             entry.content_ihtml = content_ihtml
             return
 
