@@ -102,7 +102,8 @@ def retarget_links(html_tree, mode='external'):
     return
 
 
-def add_toc(html_tree, marker='[TOC]', title='Contents', base_header_level=1):
+def add_toc(html_tree, marker='[TOC]', title='Contents',
+            base_header_level=1, make_anchor_id=slugify):
     """Adds a table of contents div where *marker* can be found within p
     tags on its own. Turns headings into links and optionally adjusts
     their level to be suitable for inclusion in a larger document.
@@ -116,7 +117,8 @@ def add_toc(html_tree, marker='[TOC]', title='Contents', base_header_level=1):
     tocifier = TOCifier(html_tree=html_tree,
                         marker=marker,
                         title=title,
-                        base_header_level=base_header_level)
+                        base_header_level=base_header_level,
+                        make_anchor_id=make_anchor_id)
     tocifier.process()
     return html_tree
 
@@ -125,12 +127,13 @@ class TOCifier(object):
     id_count_re = re.compile(r'^(.*)_([0-9]+)$')
     header_re = re.compile("[Hh][123456]")
 
-    def __init__(self, html_tree, marker, title, base_header_level=1):
+    def __init__(self, html_tree, marker, title, base_header_level=1,
+                 make_anchor_id=slugify):
         self.html_tree = html_tree
         self.marker = marker
         self.title = title
         self.base_header_level = base_header_level
-        self.slugify = slugify
+        self.make_anchor_id = make_anchor_id
 
     @classmethod
     def from_html_text(cls, html_text, **kw):
@@ -151,14 +154,14 @@ class TOCifier(object):
             # TODO: tocskip in class
             self.set_header_level(el)
 
-            text = ''.join(el.itertext()).strip()
+            header_text = ''.join(el.itertext()).strip()
             if not el.attrib.get('id'):
-                slug = self.slugify(text)
+                slug = self.make_anchor_id(header_text)
                 el.attrib['id'] = self.get_unique_id(slug)
 
             h_tokens.append({'level': int(el.tag[-1]),
                              'id': el.attrib['id'],
-                             'text': text})
+                             'text': header_text})
             self.anchorize_header(el)
         h_token_tree = nest_h_tokens(h_tokens)
         toc_div_el = self.build_toc_div(h_token_tree)

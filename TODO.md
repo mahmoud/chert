@@ -52,3 +52,9 @@
 * python-markdown requires exact indents of 4 spaces for nested lists
 * YAML requires block text to have "|"  (e.g., my_text: | <block text>)
 * if content only consists of headings, will parse as yaml
+
+## Themes
+
+* Norvig
+* Luu
+* Medean

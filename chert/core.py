@@ -856,6 +856,10 @@ class Site(object):
 
         # TODO: assert necessary templates are present (entry.html, etc.)
 
+    def _make_anchor_id(self, header_text):
+        return slugify(header_text,
+                       delim=self.get_config('site', 'anchor_delim', '-'))
+
     @chlog.wrap('critical', 'render site', verbose=True)
     def render(self):
         self._call_custom_hook('pre_render')
@@ -900,7 +904,7 @@ class Site(object):
             with chlog.debug('parse_content_html'):
                 content_html_tree = hypertext.html_text_to_tree(content_html)
             with chlog.debug('add_toc_content_html'):
-                hypertext.add_toc(content_html_tree)
+                hypertext.add_toc(content_html_tree, make_anchor_id=self._make_anchor_id)
             with chlog.debug('retarget_links_content_html'):
                 _mode = self.get_config('site', 'retarget_links', 'external')
                 hypertext.retarget_links(content_html_tree, mode=_mode)
