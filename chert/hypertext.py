@@ -99,6 +99,7 @@ def retarget_links(html_tree, mode='external'):
                 retarget = bool(url.host)
         if retarget:
             el.set('target', '_blank')
+            el.set('rel', 'noopener')
     return
 
 
