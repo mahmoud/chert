@@ -1090,10 +1090,11 @@ class Site(object):
         server = ThreadedHTTPServer((host, port), Handler)
         serving = False
 
+        config_path = self.paths['config_path']
         entries_path = self.paths['entries_path']
         theme_path = self.paths['theme_path']
         output_path = self.paths['output_path']
-        for changed in _iter_changed_files(entries_path, theme_path):
+        for changed in _iter_changed_files(entries_path, theme_path, config_path):
             if serving:
                 print 'Changed %s files, regenerating...' % len(changed)
                 server.shutdown()
@@ -1174,12 +1175,13 @@ def to_timestamp(dt_obj, to_utc=False):
 
 
 # TODO: also monitor config path
-def _iter_changed_files(entries_path, theme_path, interval=0.5):
+def _iter_changed_files(entries_path, theme_path, config_path, interval=0.5):
     mtimes = {}
     while True:
         changed = []
-        to_check = itertools.chain(iter_find_files(entries_path, ENTRY_PATS),
-                                   iter_find_files(theme_path, HTML_LAYOUT_PAT))
+        to_check = itertools.chain([config_path],
+                                   iter_find_files(entries_path, ENTRY_PATS),
+                                   iter_find_files(theme_path, '*'))
         for path in to_check:
             try:
                 new_mtime = os.stat(path).st_mtime
