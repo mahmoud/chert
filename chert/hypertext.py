@@ -4,6 +4,8 @@
 Largely based on an extraction from python-markdown, but can be run on
 bare HTML (not a python-markdown-based ElementTree).
 """
+from __future__ import unicode_literals
+
 import re
 from xml.etree import cElementTree as ET
 
@@ -35,7 +37,7 @@ def html_text_to_tree(html_text):
 
 
 def html_tree_to_text(html_tree):
-    options = {'quote_attr_values': True,
+    options = {'quote_attr_values': 'always',
                'use_trailing_solidus': True,
                'space_before_trailing_solidus': True}
     serializer = html5lib.serializer.HTMLSerializer(**options)
