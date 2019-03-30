@@ -1,6 +1,6 @@
 ashes
 boltons
-face
+face>=19.1.0
 glom
 hyperlink
 lithoxyl

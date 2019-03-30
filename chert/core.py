@@ -6,8 +6,6 @@ import imp
 import json
 import time
 import string
-import shutil
-import argparse
 import itertools
 import subprocess
 from datetime import datetime
@@ -50,7 +48,7 @@ DEFAULT_CONFIG_FILENAME = 'chert.yaml'
 SITE_TITLE = 'Chert'
 SITE_HEAD_TITLE = SITE_TITLE  # goes in the head tag
 SITE_AUTHOR = 'Mahmoud Hashemi'
-SITE_COPYRIGHT = '&copy; 2017 Mahmoud Hashemi <img height="14" src="/img/by-sa.png" />'
+SITE_COPYRIGHT = '&copy; 2019 Mahmoud Hashemi <img height="14" src="/img/by-sa.png" />'
 DEFAULT_AUTOREFRESH = 4
 
 PREV_ENTRY_COUNT, NEXT_ENTRY_COUNT = 5, 5
@@ -1218,101 +1216,3 @@ def omd_load(stream, Loader=yaml.Loader, object_pairs_hook=OMD):
         yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
         construct_mapping)
     return yaml.load(stream, OrderedLoader)
-
-
-def delete_dir_contents(path):
-    for entry in os.listdir(path):
-        cur_path = pjoin(path, entry)
-        if os.path.isfile(cur_path) or os.path.islink(cur_path):
-            os.unlink(cur_path)
-        elif os.path.isdir(cur_path):
-            shutil.rmtree(cur_path)
-    return
-
-
-def get_argparser():
-    prs = argparse.ArgumentParser()
-    subprs = prs.add_subparsers(dest='action',
-                                help='chert supports init, serve, and publish'
-                                ' subcommands')
-    init_prs = subprs.add_parser('init',
-                                 help='create a new Chert site')
-    init_prs.add_argument('target_dir',
-                          help='path of a non-existent directory to'
-                          ' create a new Chert site')
-    subprs.add_parser('version',
-                      help='display the version and other metadata')
-    subprs.add_parser('serve',
-                      help='work on a Chert site using the local server')
-    subprs.add_parser('render',
-                      help='generate a local copy of the site')
-    subprs.add_parser('publish',
-                      help='upload a Chert site to the remote server')
-    subprs.add_parser('clean',
-                      help='clean Chert output site directory')
-
-    return prs
-
-
-def find_chert_dir(start_dir, config_filename=DEFAULT_CONFIG_FILENAME):
-    prev_dir = None
-    cur_dir = os.path.abspath(start_dir)
-    while prev_dir != cur_dir:
-        if os.path.isfile(pjoin(cur_dir, config_filename)):
-            break
-        prev_dir = cur_dir
-        cur_dir = os.path.dirname(cur_dir)
-    else:
-        raise ValueError('expected current or parent directories to'
-                         ' contain a Chert config file (chert.yaml),'
-                         ' not found in: %s' % start_dir)
-    return cur_dir
-
-
-def main():
-    prs = get_argparser()
-    kwargs = dict(prs.parse_args()._get_kwargs())
-    action = kwargs['action']
-
-    if action == 'init':
-        with chlog.critical('init action'):
-            target_dir = abspath(kwargs['target_dir'])
-            if os.path.exists(target_dir):
-                raise RuntimeError('chert init failed, path already exists: %s'
-                                   % target_dir)
-            src_dir = pjoin(CUR_PATH, 'scaffold')
-            copytree(src_dir, target_dir)
-            print 'Created Chert instance in directory: %s' % target_dir
-        return
-
-    input_path = find_chert_dir(os.getcwd())
-    if action == 'serve':
-        ch = Site(input_path, dev_mode=True)
-        ch.serve()
-    elif action == 'publish':
-        with chlog.critical('publish action') as log_rec:
-            ch = Site(input_path)
-            ch.process()
-            success = ch.publish()
-            if success:
-                log_rec.success()
-            else:
-                log_rec.failure()
-    elif action == 'version':
-        print 'chert version %s' % __version__
-        print '  located at: %s' % os.path.abspath(os.path.dirname(__file__))
-    elif action == 'render':
-        with chlog.critical('render action'):
-            ch = Site(input_path)
-            ch.process()
-    elif action == 'clean':
-        with chlog.critical('clean action'):
-            ch = Site(input_path)
-            delete_dir_contents(ch.output_path)
-            print 'Cleaned Chert output path: %s' % ch.output_path
-    else:
-        raise ValueError('unknown action: %s' % action)
-
-
-if __name__ == '__main__':
-    main()
