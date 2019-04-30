@@ -100,7 +100,7 @@ def version():
 def main():
     cmd = Command(name='chert', func=None)
 
-    cmd.add(init, posargs={'min_count': 1, 'max_count': 1, 'display': 'target_dir', 'provides': 'target_dir'})
+    cmd.add(init, posargs={'count': 1, 'name': 'target_dir'})
     cmd.add(serve)
     cmd.add(render)
     cmd.add(publish)
