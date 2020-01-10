@@ -5,18 +5,18 @@
 #    pip-compile 
 #
 ashes==19.2.0
-attrs==19.1.0             # via glom
-boltons==19.1.0
+attrs==19.3.0             # via glom
+boltons==20.0.0
 click==7.0                # via pip-tools
-face==19.1.0
-glom==19.2.0
+face==20.0.0
+glom==19.10.0
 html5lib==1.0.1
-hyperlink==18.0.0
+hyperlink==19.0.0
 idna==2.8                 # via hyperlink
-lithoxyl==0.4.3
-markdown==3.1
-pip-tools==3.5.0
-python-dateutil==2.8.0
-pyyaml==5.1
-six==1.12.0               # via html5lib, pip-tools, python-dateutil
+lithoxyl==20.0.0
+markdown==3.1.1
+pip-tools==4.3.0
+python-dateutil==2.8.1
+pyyaml==5.3
+six==1.13.0               # via html5lib, pip-tools, python-dateutil
 webencodings==0.5.1       # via html5lib
