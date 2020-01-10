@@ -795,15 +795,16 @@ class Site(object):
             with chlog.info('entry load') as rec:
                 try:
                     entry = self._entry_type.from_path(ep)
+                    rec['entry_title'] = entry.title
+                    rec['entry_length'] = round(entry.get_reading_time(), 1)
                 except IOError:
                     rec.exception('unopenable entry path: {}', ep)
                     continue
                 except:
-                    rec.exception('entry load error: {exc_message}')
+                    rec['entry_path'] = ep
+                    rec.exception('entry {entry_path} load error: {exc_message}')
                     continue
                 else:
-                    rec['entry_title'] = entry.title
-                    rec['entry_length'] = round(entry.get_reading_time(), 1)
                     rec.success('entry loaded:'
                                 ' {entry_title} ({entry_length}m)')
             if entry.is_draft:
