@@ -1,13 +1,14 @@
 # user customization
 # TODO: document other hooks
 
+from __future__ import print_function
 import os
 
-print ' - custom module loaded.'
+print(' - custom module loaded.')
 
 
 def chert_post_load(chert_obj):
-    print ' - post_load hook: %s entries loaded' % len(chert_obj.entries)
+    print(' - post_load hook: %s entries loaded' % len(chert_obj.entries))
     _autotag_entries(chert_obj)
 
 

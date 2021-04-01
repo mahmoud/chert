@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+
 import re
 import os
 import imp
@@ -10,9 +12,15 @@ import itertools
 import subprocess
 from datetime import datetime
 from os.path import abspath, join as pjoin
-from SocketServer import ThreadingMixIn
-from SimpleHTTPServer import SimpleHTTPRequestHandler
-from BaseHTTPServer import HTTPServer
+try:
+    from SocketServer import ThreadingMixIn
+    from SimpleHTTPServer import SimpleHTTPRequestHandler
+    from BaseHTTPServer import HTTPServer
+except ImportError:
+    from socketserver import ThreadingMixIn
+    from http.server import SimpleHTTPRequestHandler, HTTPServer
+    unicode = str
+
 from threading import Thread
 from pipes import quote as shell_quote
 
@@ -195,7 +203,7 @@ class DataPart(Part):
         return [self._format_default(field_name, v) for v in value]
 
     def _format_link(self, field_name, value):
-        if isinstance(value, basestring):
+        if isinstance(value, str):
             return {'text': self.get_field_label(field_name),
                     'href': value,
                     'tip': None}
@@ -242,7 +250,7 @@ class DataPart(Part):
 
     def _is_image(self, value):
         # TODO
-        if isinstance(value, basestring) and self._is_link(value):
+        if isinstance(value, str) and self._is_link(value):
             if value.endwith('jpg') or value.endswith('png'):
                 return True
         return False
@@ -343,7 +351,7 @@ class Entry(object):
 
     def get_word_count(self):
         # TODO
-        str_parts = [p for p in self.parts if isinstance(p, basestring)]
+        str_parts = [p for p in self.parts if isinstance(p, str)]
         content = ' '.join(str_parts)
         no_punct = _punct_re.sub('', content)
         return len(no_punct.split())
@@ -378,7 +386,7 @@ class Entry(object):
         for pi, part in enumerate(self.parts, start=1):
             cur = {}
             cur['part_idx'] = pi
-            if isinstance(part, basestring):
+            if isinstance(part, str):
                 cur = TextPart(part, self, pi)
                 dci = 1
             elif isinstance(part, dict):
@@ -791,6 +799,7 @@ class Site(object):
         for entry_path in iter_find_files(entries_path, ENTRY_PATS):
             entry_paths.append(entry_path)
         entry_paths.sort()
+
         for ep in entry_paths:
             with chlog.info('entry load') as rec:
                 try:
@@ -801,6 +810,7 @@ class Site(object):
                     rec.exception('unopenable entry path: {}', ep)
                     continue
                 except:
+                    import pdb;pdb.post_mortem()
                     rec['entry_path'] = ep
                     rec.exception('entry {entry_path} load error: {exc_message}')
                     continue
@@ -1095,13 +1105,13 @@ class Site(object):
         output_path = self.paths['output_path']
         for changed in _iter_changed_files(entries_path, theme_path, config_path):
             if serving:
-                print 'Changed %s files, regenerating...' % len(changed)
+                print('Changed %s files, regenerating...' % len(changed))
                 server.shutdown()
             with chlog.critical('site generation', reraise=True):
                 self.process()
-            print 'Serving from %s' % output_path
+            print('Serving from %s' % output_path)
             os.chdir(abspath(output_path))
-            print 'Serving at http://%s:%s%s' % (host, port, base_url)
+            print('Serving at http://%s:%s%s' % (host, port, base_url))
 
             thread = Thread(target=server.serve_forever)
             thread.daemon = True
@@ -1138,17 +1148,17 @@ class Site(object):
                                            local_site_path,
                                            remote_slug)
         log_rec['rsync_cmd'] = full_rsync_cmd
-        print 'Executing', full_rsync_cmd
+        print('Executing', full_rsync_cmd)
         try:
             rsync_output = subprocess.check_output(full_rsync_cmd, shell=True)
         except subprocess.CalledProcessError as cpe:
             log_rec['rsync_exit_code'] = cpe.returncode
             rsync_output = cpe.output
-            print rsync_output
+            print(rsync_output)
             log_rec.failure('publish failed: rsync got exit code {rsync_exit_code}')
             return False
         else:
-            print rsync_output
+            print(rsync_output)
             log_rec.success()
         return True
         #self._call_custom_hook('post_publish')

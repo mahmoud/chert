@@ -1,7 +1,10 @@
 """
 File Access Layer
 """
-
+try:
+    unicode
+except NameError:
+    unicode = str
 
 class ChertFAL(object):
     def __init__(self, logger):

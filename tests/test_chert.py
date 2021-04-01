@@ -6,14 +6,6 @@ from os.path import dirname
 import py
 import pytest
 
-EXPECTED_VIRTUALENV = 'chert-tests'
-
-
-def test_virtualenv():
-    assert getattr(sys, 'real_prefix', None), 'virtualenv not active'
-
-    virtualenv_name = os.path.split(dirname(dirname(sys.executable)))[-1]
-    #assert virtualenv_name == EXPECTED_VIRTUALENV  # TODO: addoption
 
 
 @pytest.fixture

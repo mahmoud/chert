@@ -6,6 +6,7 @@ bare HTML (not a python-markdown-based ElementTree).
 """
 from __future__ import unicode_literals
 
+from __future__ import print_function
 import re
 from xml.etree import cElementTree as ET
 
@@ -81,7 +82,7 @@ def retarget_links(html_tree, mode='external'):
         raise ValueError('expected "none", "external", or "all", not: %r'
                          % mode)
     for el in html_tree.iter():
-        if not isinstance(el.tag, basestring):
+        if not isinstance(el.tag, str):
             continue
         if not el.tag == 'a':
             continue
@@ -149,7 +150,7 @@ class TOCifier(object):
 
         h_tokens = []
         for el in self.root.iter():
-            if not isinstance(el.tag, basestring):
+            if not isinstance(el.tag, str):
                 continue
             h_match = self.header_re.match(el.tag)
             if not h_match:
@@ -178,7 +179,7 @@ class TOCifier(object):
                     for parent in self.root.iter()
                     for child in parent)
         for (p, c) in pc_pairs:
-            if not isinstance(c.tag, basestring):
+            if not isinstance(c.tag, str):
                 continue
             if c.tag in ('pre', 'code'):
                 continue
@@ -331,7 +332,7 @@ def nest_h_tokens(h_tokens):
 def main():
     raw_html = open('/home/mahmoud/projects/sedimental/site/podcasts.html').read()
     html = raw_html[raw_html.index('<body>'):raw_html.index('</body>') + 7]
-    print add_toc(html).encode('utf-8')
+    print(add_toc(html).encode('utf-8'))
     return
 
 

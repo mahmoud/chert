@@ -1,4 +1,5 @@
 
+from __future__ import print_function
 import os
 from os.path import abspath, dirname, join as pjoin
 import shutil
@@ -38,7 +39,7 @@ def init(target_dir):
                            % target_dir)
     src_dir = pjoin(CUR_PATH, 'scaffold')
     copytree(src_dir, target_dir)
-    print 'Created Chert instance in directory: %s' % target_dir
+    print('Created Chert instance in directory: %s' % target_dir)
 
 
 @face_middleware(provides=['input_path'], optional=True)
@@ -87,13 +88,13 @@ def clean(input_path):
     'clean Chert output site directory'
     ch = Site(input_path)
     delete_dir_contents(ch.output_path)
-    print 'Cleaned Chert output path: %s' % ch.output_path
+    print('Cleaned Chert output path: %s' % ch.output_path)
 
 
 def version():
     'display the version and other metadata'
-    print 'chert version %s' % __version__
-    print '  located at: %s' % os.path.abspath(os.path.dirname(__file__))
+    print('chert version %s' % __version__)
+    print('  located at: %s' % os.path.abspath(os.path.dirname(__file__)))
 
 
 
