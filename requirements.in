@@ -3,7 +3,7 @@ boltons
 face>=20.1.0
 glom
 hyperlink
-lithoxyl
+lithoxyl>=21.0.0
 Markdown
 html5lib
 pip-tools
