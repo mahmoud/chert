@@ -38,5 +38,6 @@ setup(name='chert',
           'Intended Audience :: Developers',
           'Topic :: Internet :: WWW/HTTP',
           'Operating System :: OS Independent',
-          'Programming Language :: Python :: 2.7']
+          'Programming Language :: Python :: 2.7',
+          'Programming Language :: Python :: 3.9']
       )
