@@ -566,7 +566,7 @@ class Site(object):
 
     def reload_config(self, **kw):
         # TODO: take optional kwarg
-        self.config = yaml.load(self.fal.read(self.paths['config_path']))
+        self.config = yaml.safe_load(self.fal.read(self.paths['config_path']))
 
         # set theme
         with chlog.debug('setting theme'):
