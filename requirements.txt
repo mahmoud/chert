@@ -4,22 +4,47 @@
 #
 #    pip-compile --annotation-style=line requirements.in
 #
-ashes==19.2.0             # via -r requirements.in
-attrs==19.3.0             # via glom
-boltons==20.0.0           # via -r requirements.in, face, glom, lithoxyl
-click==7.0                # via pip-tools
-face==20.1.1              # via -r requirements.in, glom
-glom==19.10.0             # via -r requirements.in
-html5lib==1.1             # via -r requirements.in
-hyperlink==19.0.0         # via -r requirements.in
-idna==2.8                 # via hyperlink
-lithoxyl==21.0.0          # via -r requirements.in
-markdown==3.1.1           # via -r requirements.in
-pip-tools==4.4.0          # via -r requirements.in
-python-dateutil==2.8.1    # via -r requirements.in
-pyyaml==5.3               # via -r requirements.in
-six==1.14.0               # via html5lib, pip-tools, python-dateutil
-webencodings==0.5.1       # via html5lib
+ashes==19.2.0
+    # via -r requirements.in
+attrs==19.3.0
+    # via glom
+boltons==20.0.0
+    # via
+    #   -r requirements.in
+    #   face
+    #   glom
+    #   lithoxyl
+click==7.0
+    # via pip-tools
+face==20.1.1
+    # via
+    #   -r requirements.in
+    #   glom
+glom==19.10.0
+    # via -r requirements.in
+html5lib==1.1
+    # via -r requirements.in
+hyperlink==19.0.0
+    # via -r requirements.in
+idna==2.8
+    # via hyperlink
+lithoxyl==21.0.0
+    # via -r requirements.in
+markdown==3.1.1
+    # via -r requirements.in
+pip-tools==4.4.0
+    # via -r requirements.in
+python-dateutil==2.8.1
+    # via -r requirements.in
+pyyaml==5.4
+    # via -r requirements.in
+six==1.14.0
+    # via
+    #   html5lib
+    #   pip-tools
+    #   python-dateutil
+webencodings==0.5.1
+    # via html5lib
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
