@@ -10,7 +10,7 @@ boltons==20.0.0           # via -r requirements.in, face, glom, lithoxyl
 click==7.0                # via pip-tools
 face==20.1.1              # via -r requirements.in, glom
 glom==19.10.0             # via -r requirements.in
-html5lib==1.0.1           # via -r requirements.in
+html5lib==1.1             # via -r requirements.in
 hyperlink==19.0.0         # via -r requirements.in
 idna==2.8                 # via hyperlink
 lithoxyl==21.0.0          # via -r requirements.in
