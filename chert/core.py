@@ -1073,12 +1073,9 @@ class Site(object):
                 if os.name == "nt":
                     if os.path.exists(uploads_link_path) or os.path.islink(uploads_link_path):
                         os.unlink(uploads_link_path)
-                    try:
-                        command = f'mklink /D "{uploads_link_path}" "{self.uploads_path}"'
-                        subprocess.run(command, shell=True, check=True)
-                        message = "Created symlink using mklink on Windows"
-                    except subprocess.CalledProcessError as e:
-                        message = f"Failed to create symlink: {e}"
+                    command = f'mklink /D "{uploads_link_path}" "{self.uploads_path}"'
+                    subprocess.run(command, shell=True, check=True)
+                    message = "Created symlink using mklink on Windows"
                 else:
                     if os.path.islink(uploads_link_path):
                         os.unlink(uploads_link_path)
