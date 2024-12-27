@@ -6,6 +6,7 @@ import re
 import os
 import importlib.util
 import json
+import shutil
 import time
 import string
 import itertools
@@ -1071,11 +1072,10 @@ class Site(object):
             else:
                 message = None
                 if os.name == "nt":
-                    if os.path.exists(uploads_link_path) or os.path.islink(uploads_link_path):
-                        os.unlink(uploads_link_path)
-                    command = f'mklink /D "{uploads_link_path}" "{self.uploads_path}"'
-                    subprocess.run(command, shell=True, check=True)
-                    message = "Created symlink using mklink on Windows"
+                    if os.path.exists(uploads_link_path):
+                        shutil.rmtree(uploads_link_path)
+                    shutil.copytree(self.uploads_path, uploads_link_path)
+                    message = 'refreshed existing uploads files'
                 else:
                     if os.path.islink(uploads_link_path):
                         os.unlink(uploads_link_path)
