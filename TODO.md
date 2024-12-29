@@ -1,5 +1,7 @@
 # TODO
 
+* Add `<rel> me` config option
+
 * File format for short-form posts (yaml with explicit content
   field). Generic approach: if content field is not defined, expect
   the next document in the file to contain the content. If content
