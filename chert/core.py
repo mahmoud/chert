@@ -4,8 +4,9 @@ from __future__ import print_function
 
 import re
 import os
-import imp
+import importlib.util
 import json
+import shutil
 import time
 import string
 import itertools
@@ -22,7 +23,7 @@ except ImportError:
     unicode = str
 
 from threading import Thread
-from pipes import quote as shell_quote
+import shlex
 
 import yaml
 from markdown import Markdown
@@ -88,7 +89,7 @@ ATOM_FEED_FILENAME = 'atom.xml'
 EXPORT_SRC_EXT = '.md'
 EXPORT_HTML_EXT = '.html'  # some people might prefer .htm
 
-DEV_SERVER_HOST = '0.0.0.0'
+DEV_SERVER_HOST = '127.0.0.1'
 DEV_SERVER_PORT = 8080
 DEV_SERVER_BASE_PATH = '/'  # TODO: merge with prod canonical_base_path?
 
@@ -764,7 +765,11 @@ class Site(object):
         # site_name = os.path.split(input_path)[1]
         with chlog.debug('import site custom module'):
             mod_name = 'custom'
-            self.custom_mod = imp.load_source(mod_name, custom_mod_path)
+            spec = importlib.util.spec_from_file_location(mod_name, custom_mod_path)
+            if spec is None:
+                raise ImportError(f"Cannot find spec for module {mod_name} at {custom_mod_path}")
+            self.custom_mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(self.custom_mod)
 
     def _call_custom_hook(self, hook_name):
         with chlog.debug('call custom {hook_name} hook',
@@ -1066,10 +1071,16 @@ class Site(object):
                 rec.failure('no uploads directory at {}', self.uploads_path)
             else:
                 message = None
-                if os.path.islink(uploads_link_path):
-                    os.unlink(uploads_link_path)
-                    message = 'refreshed existing uploads symlink'
-                os.symlink(self.uploads_path, uploads_link_path)
+                if os.name == "nt":
+                    if os.path.exists(uploads_link_path):
+                        shutil.rmtree(uploads_link_path)
+                    shutil.copytree(self.uploads_path, uploads_link_path)
+                    message = 'refreshed existing uploads files'
+                else:
+                    if os.path.islink(uploads_link_path):
+                        os.unlink(uploads_link_path)
+                        message = 'refreshed existing uploads symlink'
+                    os.symlink(self.uploads_path, uploads_link_path)
                 rec.success(message)
 
         self._call_custom_hook('post_export')
@@ -1128,7 +1139,7 @@ class Site(object):
         prod_config = self.get_config('prod')
         rsync_cmd = prod_config.get('rsync_cmd', 'rsync')
         if not rsync_cmd.isalpha():
-            rsync_cmd = shell_quote(rsync_cmd)
+            rsync_cmd = shlex.quote(rsync_cmd)
         # TODO: add -e 'ssh -o "NumberOfPasswordPrompts 0"' to fail if
         # ssh keys haven't been set up.
         rsync_flags = prod_config.get('rsync_flags', 'avzPk')
@@ -1141,7 +1152,7 @@ class Site(object):
         remote_path = prod_config['remote_path']
         remote_slug = "%s@%s:'%s'" % (remote_user,
                                       remote_host,
-                                      shell_quote(remote_path))
+                                      shlex.quote(remote_path))
 
         full_rsync_cmd = '%s -%s %s %s' % (rsync_cmd,
                                            rsync_flags,
