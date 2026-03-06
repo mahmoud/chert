@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import print_function
-
 import re
 import os
 import importlib.util
@@ -13,14 +9,8 @@ import itertools
 import subprocess
 from datetime import datetime
 from os.path import abspath, join as pjoin
-try:
-    from SocketServer import ThreadingMixIn
-    from SimpleHTTPServer import SimpleHTTPRequestHandler
-    from BaseHTTPServer import HTTPServer
-except ImportError:
-    from socketserver import ThreadingMixIn
-    from http.server import SimpleHTTPRequestHandler, HTTPServer
-    unicode = str
+from socketserver import ThreadingMixIn
+from http.server import SimpleHTTPRequestHandler, HTTPServer
 
 from threading import Thread
 import shlex
@@ -40,7 +30,7 @@ from markdown.extensions.codehilite import CodeHiliteExtension
 
 from chert import hypertext
 from chert.utils import dt_to_dict
-from chert.version import __version__
+from chert import __version__
 from chert.log import chert_log as chlog
 from chert.fal import ChertFAL
 from chert.parsers import parse_entry
@@ -696,7 +686,7 @@ class Site(object):
             if code is None:
                 rec.failure('site.analytics_code not set in config.yaml')
                 return ''
-            match = _analytics_re.search(unicode(code))
+            match = _analytics_re.search(str(code))
             if not match:
                 rec.failure('analytics code blank or invalid: {!r}', code)
                 return ''

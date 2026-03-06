@@ -1,12 +1,8 @@
-# -*- coding: utf-8 -*-
 """Add a Table of Contents to any HTML via cElementTree and friends.
 
 Largely based on an extraction from python-markdown, but can be run on
 bare HTML (not a python-markdown-based ElementTree).
 """
-from __future__ import unicode_literals
-
-from __future__ import print_function
 import re
 from xml.etree import cElementTree as ET
 
@@ -20,13 +16,6 @@ _rel_link_re = re.compile(r'(?P<attribute>src|href)'
                           r'(?P<quote>[\'"])'
                           r'(?P<relpath>\S*)'
                           r'(?P=quote)')
-
-
-def to_unicode(obj):
-    try:
-        return unicode(obj)
-    except UnicodeDecodeError:
-        return unicode(obj, encoding='utf8')
 
 
 def remove_marker(text, marker='[TOC]'):

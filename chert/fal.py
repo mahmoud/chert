@@ -1,11 +1,6 @@
 """
 File Access Layer
 """
-try:
-    unicode
-except NameError:
-    unicode = str
-
 class ChertFAL(object):
     def __init__(self, logger):
         # relative path for pprinting
@@ -22,7 +17,7 @@ class ChertFAL(object):
     def write(self, path, data, level='debug', encoding='utf-8'):
         level_method = getattr(self.logger, level)
         with level_method('write file {path}', path=path) as rec:
-            if isinstance(data, unicode):
+            if isinstance(data, str):
                 output_bytes = data.encode(encoding)
             else:
                 output_bytes = data

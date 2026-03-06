@@ -1,7 +1,6 @@
 # user customization
 # TODO: document other hooks
 
-from __future__ import print_function
 import os
 
 print(' - custom module loaded.')

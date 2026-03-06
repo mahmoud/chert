@@ -1,6 +1,7 @@
 tmp.py
 examples/cline/todo.db
 *.py[cod]
+__pycache__/
 
 # emacs
 *~
@@ -13,26 +14,23 @@ examples/cline/todo.db
 
 # Packages
 *.egg
-*.egg-info
-dist
-build
-eggs
-parts
-bin
-var
-sdist
-develop-eggs
+*.egg-info/
+dist/
+build/
+eggs/
+sdist/
+develop-eggs/
 .installed.cfg
-lib
-lib64
 
 # Installer logs
 pip-log.txt
 
 # Unit test / coverage reports
 .coverage
-.tox
+.tox/
 nosetests.xml
+htmlcov/
+.pytest_cache/
 
 # Translations
 *.mo
@@ -46,7 +44,11 @@ nosetests.xml
 .DS_Store
 
 # Pycharm
-.idea
+.idea/
 
 # Vim
 *.swp
+
+# Virtualenvs
+venv/
+.venv/

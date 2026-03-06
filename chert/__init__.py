@@ -1,3 +1,3 @@
-# -*- coding: utf-8 -*-
+"""Sharp and sparky static-site generator for periodic writers."""
 
-from chert.version import __version__
+__version__ = '24.0.1dev'

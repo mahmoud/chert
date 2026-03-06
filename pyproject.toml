@@ -1,0 +1,49 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "chert"
+dynamic = ["version"]
+description = "Sharp and sparky static-site generation."
+readme = "README.md"
+authors = [{ name = "Mahmoud Hashemi", email = "mahmoud@hatnote.com" }]
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Topic :: Internet :: WWW/HTTP",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "ashes>=19.2.0",
+    "boltons>=20.0.0",
+    "face>=20.1.1",
+    "glom>=22.1.0",
+    "lithoxyl>=21.0.0",
+    "Markdown>=3.1",
+    "python-dateutil>=2.8.0",
+    "PyYAML>=5.1.0",
+    "html5lib>=1.0.1",
+    "hyperlink>=18.0.0",
+]
+
+[project.scripts]
+chert = "chert.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/mahmoud/chert"
+
+[tool.flit.sdist]
+include = ["tests/", "tox.ini", "LICENSE", "README.md"]
+exclude = ["chert/scaffold/site"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["acceptance: full render against real sedimental site (slow)"]
