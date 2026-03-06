@@ -129,22 +129,21 @@ is blocked.
 
 ## Post-publish verification
 
-After pushing, wait ~2 minutes for PyPI propagation, then verify:
+After pushing, wait ~2 minutes for PyPI propagation, then verify in a
+temporary virtualenv **outside the repo** (to avoid the local source tree
+shadowing the installed package):
 
 ```bash
-pip install chert==24.0.1 --index-url https://pypi.org/simple/ --force-reinstall
+python3 -m venv /tmp/chert-verify && source /tmp/chert-verify/bin/activate
+pip install chert==24.0.1 --index-url https://pypi.org/simple/
 python -c "import chert; print(chert.__version__)"
 # Should print: 24.0.1
+pytest tests/ -v
+deactivate && rm -rf /tmp/chert-verify
 ```
 
 If `--index-url` fails with 404, wait another minute and retry. PyPI CDN
 propagation can take 1-5 minutes.
-
-Then run the test suite against the installed package:
-
-```bash
-pytest tests/ -v
-```
 
 Report the results to the user.
 
