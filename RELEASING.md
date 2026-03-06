@@ -16,8 +16,7 @@ that the version does **not** contain `dev` before uploading to PyPI.
 
 ## Prerequisites
 
-Complete the one-time setup in `UPGRADE_TODO.md` (PyPI Trusted Publisher,
-GitHub `pypi` environment). Once done, delete that file.
+One-time setup of PyPI Trusted Publisher / GitHub `pypi` environment (OIDC, no tokens).
 
 ## Release Steps
 
