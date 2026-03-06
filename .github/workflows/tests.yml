@@ -39,3 +39,11 @@ jobs:
         with:
           name: tox-output-${{ matrix.name }}
           path: tox-output.txt
+      - name: Write failure summary
+        if: failure()
+        shell: bash
+        run: |
+          echo '## Tox Output (${{ matrix.name }})' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat tox-output.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
