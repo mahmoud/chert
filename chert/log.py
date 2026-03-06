@@ -22,14 +22,20 @@ begin_fmt = ('{status_char}+{import_delta_s}'
 
 stderr_fmtr = SensibleFormatter(fmt,
                                 begin=begin_fmt)
-stderr_emtr = StreamEmitter('stderr')
-stderr_filter = SensibleFilter(success='info',
-                               failure='debug',
-                               exception='debug')
-stderr_sink = SensibleSink(formatter=stderr_fmtr,
-                           emitter=stderr_emtr,
-                           filters=[stderr_filter])
-chert_log.add_sink(stderr_sink)
+try:
+    stderr_emtr = StreamEmitter('stderr')
+except TypeError:
+    # pytest-cov on Windows replaces sys.stderr with a temp file wrapper
+    # that lithoxyl's StreamEmitter doesn't recognize
+    pass
+else:
+    stderr_filter = SensibleFilter(success='info',
+                                   failure='debug',
+                                   exception='debug')
+    stderr_sink = SensibleSink(formatter=stderr_fmtr,
+                               emitter=stderr_emtr,
+                               filters=[stderr_filter])
+    chert_log.add_sink(stderr_sink)
 
 try:
     from lithoxyl.emitters import SyslogEmitter
@@ -48,13 +54,3 @@ else:
 
 
 chert_log.add_sink(DevDebugSink(post_mortem=bool(os.getenv('CHERT_PDB'))))
-
-
-def _ppath(path):  # lithoxyl todo
-    # find module path (or package path) and relativize to that?
-    if not path.startswith('/'):
-        return path
-    rel_path = os.path.relpath(path, input_path)
-    if rel_path.startswith('..'):
-        return path
-    return rel_path

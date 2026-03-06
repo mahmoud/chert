@@ -29,21 +29,4 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - name: Run tests
-        id: tox
-        run: uvx --with tox-uv tox -e ${{ matrix.tox }} 2>&1 | tee tox-output.txt
-        shell: bash
-      - name: Upload tox output
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: tox-output-${{ matrix.name }}
-          path: tox-output.txt
-      - name: Write failure summary
-        if: failure()
-        shell: bash
-        run: |
-          echo '## Tox Output (${{ matrix.name }})' >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          cat tox-output.txt >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+      - run: uvx --with tox-uv tox -e ${{ matrix.tox }}
