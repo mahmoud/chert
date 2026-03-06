@@ -62,7 +62,7 @@ jobs:
         run: |
           TAG=${GITHUB_REF#refs/tags/}
           for i in $(seq 1 30); do
-            if uv pip install --dry-run chert==$TAG --index-url https://pypi.org/simple/ 2>/dev/null; then
+            if curl -s -f "https://pypi.org/pypi/chert/$TAG/json" > /dev/null; then
               echo "chert $TAG available on PyPI"
               break
             fi
