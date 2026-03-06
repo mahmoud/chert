@@ -6,7 +6,7 @@ _(March 6, 2026)_
 
 - Migrate build system to uv and pyproject.toml
 - Add GitHub Actions CI and automated PyPI publishing on tag
-- Add release skill for version management
+- Fix Windows compatibility (add `__main__.py`, fix StreamEmitter stderr handling)
 - Expand test coverage
 
 ## 24.0.0
