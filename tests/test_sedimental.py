@@ -1,9 +1,9 @@
-import sys
-import subprocess
 import os
 
 import pytest
 import shutil
+
+from chert.core import Site
 
 SEDIMENTAL_PATH = '/home/mahmoud/projects/sedimental'
 
@@ -17,12 +17,8 @@ def sedimental_render(tmp_path_factory):
     src = tmp / 'sedimental'
     shutil.copytree(SEDIMENTAL_PATH, src,
                     ignore=shutil.ignore_patterns('site', '.git', '__pycache__'))
-    prev_dir = os.getcwd()
-    os.chdir(str(src))
-    try:
-        subprocess.run([sys.executable, '-m', 'chert', 'render'], check=True, timeout=120)
-    finally:
-        os.chdir(prev_dir)
+    site = Site(str(src))
+    site.process()
     return src / 'site'
 
 

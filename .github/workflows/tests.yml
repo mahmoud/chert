@@ -29,12 +29,4 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - name: Run tests
-        run: uvx --with tox-uv tox -e ${{ matrix.tox }} 2>&1 | tee tox-output.txt
-        shell: bash
-      - name: Upload tox output on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: tox-output-${{ matrix.name }}
-          path: tox-output.txt
+      - run: uvx --with tox-uv tox -e ${{ matrix.tox }}
