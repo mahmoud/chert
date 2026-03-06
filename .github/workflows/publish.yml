@@ -1,0 +1,51 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      - "[0-9]*.[0-9]*.[0-9]*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build tools
+        run: pip install flit
+      - name: Validate version
+        run: |
+          VERSION=$(python -c "import chert; print(chert.__version__)")
+          echo "Package version: $VERSION"
+          if echo "$VERSION" | grep -qi 'dev'; then
+            echo "::error::Version $VERSION contains dev suffix. Remove it before releasing."
+            exit 1
+          fi
+          TAG=${GITHUB_REF#refs/tags/}
+          if [ "$VERSION" != "$TAG" ]; then
+            echo "::error::Tag $TAG does not match __version__ ($VERSION)"
+            exit 1
+          fi
+      - name: Build package
+        run: flit build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/chert
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
