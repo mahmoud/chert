@@ -48,7 +48,31 @@ __version__ = '24.0.1dev'
 __version__ = '24.0.1'
 ```
 
-### 3. Commit the release
+### 3. Update CHANGELOG.md
+
+Add a new section at the top of `CHANGELOG.md` (below the `# chert Changelog`
+heading) for the release version. Use this format:
+
+```markdown
+## 24.0.1
+
+_(Month Day, Year)_
+
+- First change description
+- Second change description
+```
+
+To determine what changed, review the commits since the last tag:
+
+```bash
+git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:'%s' --no-merges
+```
+
+Summarize the user-facing changes as concise bullet points. Omit version bump
+commits and other release-mechanical commits. Ask the user to confirm or adjust
+the changelog entry.
+
+### 4. Commit the release
 
 ```bash
 git commit -am "chert version 24.0.1"
@@ -56,15 +80,21 @@ git commit -am "chert version 24.0.1"
 
 Use the exact format `chert version X.Y.Z` for the commit message.
 
-### 4. Tag the release
+### 5. Tag the release
 
 ```bash
-git tag -a 24.0.1 -m "24.0.1"
+git tag -a 24.0.1 -m "short summary of key changes in this release"
 ```
 
-Tags are bare CalVer. No `v` prefix.
+Tags are bare CalVer. No `v` prefix. The tag message should be a short,
+lowercase, descriptive summary of the release (not just the version number).
+Examples:
 
-### 5. Bump to next dev version
+- `"migrate to uv, expand test coverage, add CI"`
+- `"python 3.10-3.13 support, windows fixes"`
+- `"py3.7-3.9 support, safe yaml loading, dependency bumps"`
+
+### 6. Bump to next dev version
 
 Increment the micro version and add `dev` suffix:
 
@@ -72,13 +102,13 @@ Increment the micro version and add `dev` suffix:
 __version__ = '24.0.2dev'
 ```
 
-### 6. Commit the dev bump
+### 7. Commit the dev bump
 
 ```bash
 git commit -am "bump version to 24.0.2dev"
 ```
 
-### 7. Push
+### 8. Push
 
 ```bash
 git push origin master --tags
