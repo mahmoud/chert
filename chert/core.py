@@ -84,7 +84,7 @@ DEV_SERVER_PORT = 8080
 DEV_SERVER_BASE_PATH = '/'  # TODO: merge with prod canonical_base_path?
 
 _punct_re = re.compile('[%s]+' % re.escape(string.punctuation))
-_analytics_re = re.compile("(?P<code>[\w-]+)")
+_analytics_re = re.compile(r"(?P<code>[\w-]+)")
 
 CANONICAL_DOMAIN = 'http://sedimental.org'
 CANONICAL_BASE_PATH = '/'
@@ -804,8 +804,7 @@ class Site(object):
                 except IOError:
                     rec.exception('unopenable entry path: {}', ep)
                     continue
-                except:
-                    import pdb;pdb.post_mortem()
+                except Exception:
                     rec['entry_path'] = ep
                     rec.exception('entry {entry_path} load error: {exc_message}')
                     continue

@@ -1,3 +1,4 @@
+import sys
 import subprocess
 import os
 
@@ -19,7 +20,7 @@ def sedimental_render(tmp_path_factory):
     prev_dir = os.getcwd()
     os.chdir(str(src))
     try:
-        subprocess.run(['chert', 'render'], check=True, timeout=120)
+        subprocess.run([sys.executable, '-m', 'chert', 'render'], check=True, timeout=120)
     finally:
         os.chdir(prev_dir)
     return src / 'site'

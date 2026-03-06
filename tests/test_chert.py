@@ -1,17 +1,18 @@
-import os
 import sys
-from os.path import dirname
 import subprocess
 
 import pytest
 
 
+CHERT_CMD = [sys.executable, '-m', 'chert']
+
+
 @pytest.fixture(scope="function")
-def chert_site_path(tmp_path):
+def chert_site_path(tmp_path, monkeypatch):
     """Create a test site directory and initialize chert."""
     ret = tmp_path / 'test_site'
-    os.chdir(str(tmp_path))
-    subprocess.run(['chert', 'init', str(ret)], check=True)
+    monkeypatch.chdir(tmp_path)
+    subprocess.run([*CHERT_CMD, 'init', str(ret)], check=True)
     return ret
 
 
@@ -20,10 +21,10 @@ def test_init_dirs_exist(chert_site_path):
 
 
 @pytest.fixture(scope="function")
-def chert_render_path(chert_site_path):
+def chert_render_path(chert_site_path, monkeypatch):
     """Render the test site and return the output directory."""
-    os.chdir(str(chert_site_path))
-    subprocess.run(['chert', 'render'], check=True)
+    monkeypatch.chdir(chert_site_path)
+    subprocess.run([*CHERT_CMD, 'render'], check=True)
     return chert_site_path / 'site'
 
 
