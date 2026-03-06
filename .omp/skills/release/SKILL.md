@@ -23,6 +23,11 @@ Before starting, verify ALL of these:
 2. You are on `master` branch
 3. `chert/__init__.py` has a `dev` suffix on `__version__`
 4. All tests pass: `tox -p auto` (or at minimum `pytest tests/ -v`)
+5. Check what is actually published on PyPI: https://pypi.org/project/chert/
+   **PyPI is canonical.** If the intended version already exists on PyPI, it
+   cannot be re-released -- bump to the next version instead. If a local/GitHub
+   tag exists for a version that is NOT on PyPI, the prior release failed and
+   should be retried (see "Failed release" under Error recovery).
 
 If any check fails, stop and report. Do not proceed with a dirty tree or
 failing tests.
@@ -145,6 +150,16 @@ Report the results to the user.
 
 ## Error recovery
 
+- **Failed release** (tag exists locally/on GitHub but not on PyPI): PyPI is
+  the source of truth. Delete the stale tag locally and on the remote:
+  ```bash
+  git tag -d X.Y.Z
+  git push origin :refs/tags/X.Y.Z  # if it was pushed
+  ```
+  Then check `__version__` in `chert/__init__.py`. If it was already bumped
+  past the failed release (e.g. `X.Y.(Z+1)dev`), reset it to `X.Y.Zdev` so
+  the release flow strips the suffix to the correct version. Amend or revert
+  the bump commit as needed, then restart the release from step 1.
 - **Wrong version tagged**: `git tag -d X.Y.Z && git push origin :refs/tags/X.Y.Z`
   then fix and re-tag.
 - **Publish workflow failed**: Check the GitHub Actions log. Common causes:
