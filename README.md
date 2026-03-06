@@ -10,8 +10,12 @@ $ cd yoursite
 $ less TODO.md
 ```
 
-In action:
+## Dev
 
-* [Sedimental](http://sedimental.org) ([source](https://github.com/mahmoud/sedimental))
-* [ENOTUNIQ](http://enotuniq.org)
-* [CalVer](http://calver.org)
+See RELEASING.md for how that's done. These days an agent can do it (see .omp/skills/release)
+
+## Examples
+
+* [Sedimental](https://sedimental.org) ([source](https://github.com/mahmoud/sedimental))
+* [CalVer](https://calver.org) ([source](https://github.com/mahmoud/calver))
+* [ZeroVer](https://0ver.org) ([source](https://github.com/mahmoud/zerover))
