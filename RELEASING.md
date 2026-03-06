@@ -1,13 +1,13 @@
 # Releasing chert
 
-chert uses [CalVer](https://calver.org/) (`YY.MINOR.MICRO`, e.g. `24.0.1`).
+chert uses [CalVer](https://calver.org/) (`YY.MINOR.MICRO`, e.g. `26.0.0`).
 
 ## Version Lifecycle
 
 During development, `chert/__init__.py` carries a `dev` suffix:
 
 ```python
-__version__ = '24.0.1dev'
+__version__ = '26.0.0dev'
 ```
 
 At release time, the `dev` suffix is removed, the release is tagged, and the
@@ -18,7 +18,18 @@ that the version does **not** contain `dev` before uploading to PyPI.
 
 One-time setup of PyPI Trusted Publisher / GitHub `pypi` environment (OIDC, no tokens).
 
-## Release Steps
+## Automated Release
+
+An OMP skill automates the full release flow. Run:
+
+```
+/skill:release
+```
+
+This walks through all the steps below with pre-flight checks and
+post-publish verification.
+
+## Manual Release Steps
 
 1. **Ensure tests pass:**
 
@@ -30,33 +41,33 @@ One-time setup of PyPI Trusted Publisher / GitHub `pypi` environment (OIDC, no t
 
    ```python
    # Before
-   __version__ = '24.0.1dev'
+   __version__ = '26.0.0dev'
    # After
-   __version__ = '24.0.1'
+   __version__ = '26.0.0'
    ```
 
 3. **Commit the release version:**
 
    ```bash
-   git commit -am "chert version 24.0.1"
+   git commit -am "chert version 26.0.0"
    ```
 
 4. **Tag the release:**
 
    ```bash
-   git tag -a 24.0.1 -m "24.0.1"
+   git tag -a 26.0.0 -m "26.0.0"
    ```
 
 5. **Bump to next dev version** in `chert/__init__.py`:
 
    ```python
-   __version__ = '24.0.2dev'
+   __version__ = '26.0.1dev'
    ```
 
 6. **Commit the dev bump:**
 
    ```bash
-   git commit -am "bump version to 24.0.2dev"
+   git commit -am "bump version to 26.0.1dev"
    ```
 
 7. **Push everything:**
@@ -68,11 +79,11 @@ One-time setup of PyPI Trusted Publisher / GitHub `pypi` environment (OIDC, no t
 ## What Happens Next
 
 - The `Tests` workflow runs on the push to master.
-- The `Publish to PyPI` workflow triggers on the `24.0.1` tag.
-  - It validates that `__version__` on the tagged commit matches the tag
-    and does not contain `dev`. If either check fails, the build aborts.
-  - On success, it builds with flit and publishes via PyPI Trusted Publishers
-    (OIDC, no API tokens needed).
+- The `Publish to PyPI` workflow triggers on the `26.0.0` tag:
+  - **Validates** that `__version__` matches the tag and has no `dev` suffix.
+  - **Builds** with flit and publishes via PyPI Trusted Publishers (OIDC).
+  - **Verifies** the published package: installs from PyPI, checks the
+    version matches, and runs the test suite.
 - Verify at https://pypi.org/project/chert/
 
 ## Safety Checks
@@ -80,6 +91,8 @@ One-time setup of PyPI Trusted Publisher / GitHub `pypi` environment (OIDC, no t
 The publish workflow will **refuse to publish** if:
 
 - `__version__` contains `dev` (or any dev/pre-release suffix)
-- `__version__` does not match the tag (e.g., tag `24.0.1` but version is `24.0.0`)
+- `__version__` does not match the tag (e.g., tag `26.0.0` but version is `25.0.0`)
 
-This means accidentally tagging a dev commit is a no-op, not a bad release.
+After publishing, a verification job installs the package from PyPI and runs
+the test suite. If verification fails, the workflow reports the error (the
+package is already published at that point; fix forward with a patch release).

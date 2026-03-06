@@ -40,6 +40,14 @@ chert = "chert.cli:main"
 [project.urls]
 Homepage = "https://github.com/mahmoud/chert"
 
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "tox>=4",
+    "tox-uv>=1",
+]
+
 [tool.flit.sdist]
 include = ["tests/", "tox.ini", "LICENSE", "README.md"]
 exclude = ["chert/scaffold/site"]
