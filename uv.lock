@@ -22,11 +22,11 @@ wheels = [
 
 [[package]]
 name = "boltons"
-version = "25.0.0"
+version = "26.2.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/63/54/71a94d8e02da9a865587fb3fff100cb0fc7aa9f4d5ed9ed3a591216ddcc7/boltons-25.0.0.tar.gz", hash = "sha256:e110fbdc30b7b9868cb604e3f71d4722dd8f4dcb4a5ddd06028ba8f1ab0b5ace", size = 246294, upload-time = "2025-02-03T05:57:59.129Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/71/56/14c4a4931910a81ddeccfbe227925ea738e3c445d3e2af960f0bcbba1616/boltons-26.2.0.tar.gz", hash = "sha256:d39cfd15c1a1c3bd4d705c82252fa9edb8e4f5e8cc039f8e39afac7b1b47e92c", size = 242047, upload-time = "2026-09-07T10:48:17.711Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/45/7f/0e961cf3908bc4c1c3e027de2794f867c6c89fb4916fc7dba295a0e80a2d/boltons-25.0.0-py3-none-any.whl", hash = "sha256:dc9fb38bf28985715497d1b54d00b62ea866eca3938938ea9043e254a3a6ca62", size = 194210, upload-time = "2025-02-03T05:57:56.705Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/ac/1f8e4f4855e382a67392ca3bba329cb93aba1e3039289c52a86bf337f7a2/boltons-26.2.0-py3-none-any.whl", hash = "sha256:41942cbce440211bbcf2487ccdc356964ad674f95a01068b8a0dd7a1d1fed036", size = 199536, upload-time = "2026-09-07T10:48:16.319Z" },
 ]
 
 [[package]]
@@ -65,7 +65,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "ashes", specifier = ">=19.2.0" },
-    { name = "boltons", specifier = ">=20.0.0" },
+    { name = "boltons", specifier = ">=26.0.0" },
     { name = "face", specifier = ">=20.1.1" },
     { name = "glom", specifier = ">=22.1.0" },
     { name = "html5lib", specifier = ">=1.0.1" },
