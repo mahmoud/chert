@@ -1,5 +1,9 @@
 # chert Changelog
 
+## 26.1.0 (unreleased)
+
+- Pass `site.newsletter` (any mapping) from chert.yaml through to templates as `site.newsletter`.
+
 ## 26.0.0
 
 _(March 6, 2026)_

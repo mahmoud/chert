@@ -659,6 +659,7 @@ class Site(object):
         ret['author_name'] = site_config.get('author', SITE_AUTHOR)
         ret['enable_analytics'] = site_config.get('enable_analytics', True)
         ret['analytics_code'] = self._get_analytics_code()
+        ret['newsletter'] = site_config.get('newsletter') or None
 
         prod_config = self.get_config('prod')
         ret['canonical_domain'] = prod_config.get('canonical_domain',
